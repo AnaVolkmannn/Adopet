@@ -7,6 +7,10 @@ class AppColors {
   static const background = Color(0xFFFFF7E6);
   static const textPrimary = Color(0xFF333333);
   static const textSecondary = Color(0xFF666666);
+
+  static get textDark => null;
+
+  static Color? get textLight => null;
 }
 
 class AppFonts {
