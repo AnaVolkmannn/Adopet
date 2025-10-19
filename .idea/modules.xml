@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/adopet.iml" filepath="$PROJECT_DIR$/adopet.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android/adopet_android.iml" filepath="$PROJECT_DIR$/android/adopet_android.iml" />
+    </modules>
+  </component>
+</project>
