@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
-import '../../core/spacing.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -19,12 +18,7 @@ class HomeScreen extends StatelessWidget {
         title: Padding(
           padding: const EdgeInsets.only(left: 20),
           child: Row(
-            children: [
-              Image.asset(
-                'assets/images/logo.png',
-                height: 50,
-              ),
-            ],
+            children: [Image.asset('assets/images/logo.png', height: 50)],
           ),
         ),
         actions: [
@@ -94,7 +88,10 @@ class HomeScreen extends StatelessWidget {
                     child: GestureDetector(
                       onTap: () => Navigator.pushNamed(context, '/divulgar'),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 18,
+                          horizontal: 20,
+                        ),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [Color(0xFFDC004E), Color(0xFFFF5C00)],
@@ -118,7 +115,11 @@ class HomeScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(50),
                               ),
                               padding: const EdgeInsets.all(10),
-                              child: const Icon(Icons.pets, color: Colors.white, size: 26),
+                              child: const Icon(
+                                Icons.pets,
+                                color: Colors.white,
+                                size: 26,
+                              ),
                             ),
                             const SizedBox(width: 16),
                             const Column(
@@ -160,7 +161,10 @@ class HomeScreen extends StatelessWidget {
                     child: GestureDetector(
                       onTap: () => Navigator.pushNamed(context, '/adotar'),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 18,
+                          horizontal: 20,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFE6EC),
                           borderRadius: BorderRadius.circular(15),
@@ -180,7 +184,11 @@ class HomeScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(50),
                               ),
                               padding: const EdgeInsets.all(10),
-                              child: const Icon(Icons.favorite, color: Color(0xFFDC004E), size: 26),
+                              child: const Icon(
+                                Icons.favorite,
+                                color: Color(0xFFDC004E),
+                                size: 26,
+                              ),
                             ),
                             const SizedBox(width: 16),
                             const Column(
