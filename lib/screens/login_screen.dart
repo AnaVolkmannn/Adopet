@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../../core/spacing.dart';
-import '../../core/components.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});

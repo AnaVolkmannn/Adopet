@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../../core/spacing.dart';
-import '../../core/components.dart';
 
 class SignupScreen extends StatelessWidget {
   const SignupScreen({super.key});
