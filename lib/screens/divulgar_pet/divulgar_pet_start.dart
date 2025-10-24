@@ -29,10 +29,11 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
       return;
     }
 
+    // 🚀 Direcionamento correto de fluxo
     if (situacaoSelecionada == 'Perdido') {
       Navigator.pushNamed(context, '/perdido2');
     } else if (situacaoSelecionada == 'Procurando Tutor') {
-      Navigator.pushNamed(context, '/tutor1');
+      Navigator.pushNamed(context, '/tutor2'); // 🔥 atualizado
     }
   }
 

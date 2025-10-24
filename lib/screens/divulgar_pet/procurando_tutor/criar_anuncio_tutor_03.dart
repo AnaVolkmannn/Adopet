@@ -1,47 +1,54 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/anuncio_base_screen.dart';
 import '../../../widgets/custom_input.dart';
-import '../../../widgets/custom_button.dart';
 
 class CriarAnuncioTutor03 extends StatelessWidget {
   const CriarAnuncioTutor03({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Anúncio Tutor - Etapa 3')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              const CustomInput(label: 'Raça'),
-              const SizedBox(height: 15),
-              const CustomInput(label: 'Porte'),
-              const SizedBox(height: 15),
-              const CustomInput(label: 'Cor predominante'),
-              const SizedBox(height: 15),
-              const CustomInput(label: 'Cor dos olhos'),
-              const SizedBox(height: 15),
-              const CustomInput(label: 'Idade'),
-              const SizedBox(height: 25),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  CustomButton(
-                    text: 'Voltar',
-                    small: true,
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  CustomButton(
-                    text: 'Prosseguir',
-                    small: true,
-                    onPressed: () => Navigator.pushNamed(context, '/tutor4'),
-                  ),
-                ],
+    return AnuncioBaseScreen(
+      onBack: () => Navigator.pop(context),
+      onNext: () => Navigator.pushNamed(context, '/tutor4'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 🩷 Título introdutório
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(bottom: 20),
+            decoration: BoxDecoration(
+              color: Theme.of(
+                context,
+              ).colorScheme.secondary.withOpacity(0.15), // tom suave de laranja
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Text(
+              'Agora vamos detalhar as características do seu pet 🐾',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                color: Theme.of(context).primaryColor,
+                fontWeight: FontWeight.w500,
               ),
-            ],
+            ),
           ),
-        ),
+
+          // 🐶 Inputs estilizados
+          CustomInput(label: 'Raça', hint: 'Digite a raça do animal'),
+          const SizedBox(height: 15),
+          CustomInput(label: 'Porte', hint: 'Pequeno, médio ou grande?'),
+          const SizedBox(height: 15),
+          CustomInput(
+            label: 'Cor predominante',
+            hint: 'Ex: marrom, preto, branco...',
+          ),
+          const SizedBox(height: 15),
+          CustomInput(label: 'Cor dos olhos', hint: 'Ex: castanho, azul...'),
+          const SizedBox(height: 15),
+          CustomInput(label: 'Idade', hint: 'Ex: 2 anos, 6 meses...'),
+        ],
       ),
     );
   }
