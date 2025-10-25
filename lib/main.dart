@@ -8,14 +8,7 @@ import 'screens/home_screen.dart';
 import 'screens/divulgar_pet/divulgar_pet_start.dart';
 import 'screens/divulgar_pet/perdido/criar_anuncio_perdido_02.dart';
 import 'screens/divulgar_pet/perdido/criar_anuncio_perdido_03.dart';
-import 'screens/divulgar_pet/perdido/criar_anuncio_perdido_04.dart';
-import 'screens/divulgar_pet/perdido/criar_anuncio_perdido_05.dart';
 import 'screens/divulgar_pet/perdido/criar_anuncio_perdido_06.dart';
-import 'screens/divulgar_pet/procurando_tutor/criar_anuncio_tutor_02.dart';
-import 'screens/divulgar_pet/procurando_tutor/criar_anuncio_tutor_03.dart';
-import 'screens/divulgar_pet/procurando_tutor/criar_anuncio_tutor_04.dart';
-import 'screens/divulgar_pet/procurando_tutor/criar_anuncio_tutor_05.dart';
-import 'screens/divulgar_pet/procurando_tutor/criar_anuncio_tutor_06.dart';
 import 'screens/adotar/adotar_home.dart';
 import 'screens/adotar/adotar_detalhes.dart';
 import 'screens/adotar/adotar_interesse.dart';
@@ -45,14 +38,7 @@ class MyApp extends StatelessWidget {
         '/divulgar': (context) => const DivulgarPetStart(),
         '/perdido2': (context) => const CriarAnuncioPerdido02(),
         '/perdido3': (context) => const CriarAnuncioPerdido03(),
-        '/perdido4': (context) => const CriarAnuncioPerdido04(),
-        '/perdido5': (context) => const CriarAnuncioPerdido05(),
         '/perdido6': (context) => const CriarAnuncioPerdido06(),
-        '/tutor2': (context) => const CriarAnuncioTutor02(),
-        '/tutor3': (context) => const CriarAnuncioTutor03(),
-        '/tutor4': (context) => const CriarAnuncioTutor04(),
-        '/tutor5': (context) => const CriarAnuncioTutor05(),
-        '/tutor6': (context) => const CriarAnuncioTutor06(),
         '/success': (context) => const SuccessScreen(),
         '/adotar_home': (context) => const AdotarHome(),
         '/adotar_detalhes': (context) => const AdotarDetalhes(),

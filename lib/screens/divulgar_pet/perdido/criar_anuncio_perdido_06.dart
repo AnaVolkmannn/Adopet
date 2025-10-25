@@ -12,6 +12,7 @@ class CriarAnuncioPerdido06 extends StatefulWidget {
 class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
   String? _localSelecionado;
   bool _declaracaoAceita = false;
+  bool _animalPerdido = false;
 
   final List<String> locais = [
     'Lar Temporário',
@@ -90,9 +91,51 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
 
           const SizedBox(height: 25),
 
-          // 📅 Data do desaparecimento (ou encontro)
+          // ✅ Checkbox: Animal perdido ou abandonado
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              children: [
+                Checkbox(
+                  value: _animalPerdido,
+                  activeColor: const Color(0xFFDC004E),
+                  onChanged: (v) {
+                    setState(() => _animalPerdido = v ?? false);
+                  },
+                ),
+                const Expanded(
+                  child: Text(
+                    'Animal perdido ou abandonado',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 15,
+                      color: Color(0xFFDC004E),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 🏠 Campos que aparecem quando o checkbox está marcado
+          if (_animalPerdido) ...[
+            const SizedBox(height: 10),
+            CustomInput(
+              label: 'Endereço onde foi encontrado',
+              hint: 'Digite o local aproximado',
+            ),
+            const SizedBox(height: 15),
+            CustomInput(
+              label: 'Descrição do local',
+              hint: 'Ex: Próximo à praça, perto de um mercado...',
+            ),
+            const SizedBox(height: 20),
+          ],
+
+          // 📅 Data que encontrou
           CustomInput(
-            label: 'Data do desaparecimento',
+            label: 'Data que encontrei (opcional)',
             hint: 'Ex: 8 de outubro de 2025',
           ),
           const SizedBox(height: 15),

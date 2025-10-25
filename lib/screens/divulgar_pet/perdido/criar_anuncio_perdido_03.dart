@@ -9,7 +9,7 @@ class CriarAnuncioPerdido03 extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnuncioBaseScreen(
       onBack: () => Navigator.pop(context),
-      onNext: () => Navigator.pushNamed(context, '/perdido4'),
+      onNext: () => Navigator.pushNamed(context, '/perdido6'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

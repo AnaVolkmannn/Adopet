@@ -14,7 +14,7 @@ class AnuncioBaseScreen extends StatelessWidget {
     required this.onBack,
     required this.onNext,
     this.title = 'Criar Anúncio',
-    this.subtitle = 'Ao criar um anúncio, você terá acesso ao Painel de Busca',
+    this.subtitle = 'Divulgar um pet para adoção responsável',
   });
 
   @override
