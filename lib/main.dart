@@ -6,8 +6,6 @@ import 'screens/signup_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/divulgar_pet/divulgar_pet_start.dart';
-import 'screens/divulgar_pet/perdido/criar_anuncio_perdido_02.dart';
-import 'screens/divulgar_pet/perdido/criar_anuncio_perdido_03.dart';
 import 'screens/divulgar_pet/perdido/criar_anuncio_perdido_06.dart';
 import 'screens/adotar/adotar_home.dart';
 import 'screens/adotar/adotar_detalhes.dart';
@@ -36,8 +34,6 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
         '/divulgar': (context) => const DivulgarPetStart(),
-        '/perdido2': (context) => const CriarAnuncioPerdido02(),
-        '/perdido3': (context) => const CriarAnuncioPerdido03(),
         '/perdido6': (context) => const CriarAnuncioPerdido06(),
         '/success': (context) => const SuccessScreen(),
         '/adotar_home': (context) => const AdotarHome(),

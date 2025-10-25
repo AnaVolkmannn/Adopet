@@ -13,19 +13,66 @@ class DivulgarPetStart extends StatefulWidget {
 
 class _DivulgarPetStartState extends State<DivulgarPetStart> {
   final picker = ImagePicker();
+
+  // Campos gerais
   String tipoAnuncio = 'Pet único';
   String? especieSelecionada;
   String? generoSelecionado;
+
+  // Pet único
+  final TextEditingController nomeController = TextEditingController();
+  final TextEditingController idadeController = TextEditingController();
+  final TextEditingController corOlhosController = TextEditingController();
+  bool petSemNome = false;
+  String? racaSelecionada;
+  String? corSelecionada;
+  String? porteSelecionado;
+  final List<File> fotosPetUnico = [];
+
+  // Ninhada
   int qtdMachos = 0;
   int qtdFemeas = 0;
-
-  // Armazenar as fotos selecionadas
   final Map<String, List<File?>> fotosPorGenero = {'Macho': [], 'Fêmea': []};
 
   final List<String> especies = ['Gato', 'Cachorro', 'Outro'];
   final List<String> generos = ['Macho', 'Fêmea'];
+  final List<String> racas = [
+    'Sem raça definida',
+    'Labrador',
+    'Vira-lata',
+    'Persa',
+    'Siamês',
+    'Poodle',
+    'Outro',
+  ];
+  final List<String> cores = [
+    'Preto',
+    'Branco',
+    'Marrom',
+    'Cinza',
+    'Caramelo',
+    'Mesclado',
+  ];
+  final List<String> portes = ['Pequeno', 'Médio', 'Grande'];
 
-  // 🩷 Selecionar imagem da galeria
+  // 📸 Selecionar imagem
+  Future<void> _selecionarImagemUnica() async {
+    if (fotosPetUnico.length >= 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Você pode adicionar até 3 fotos.'),
+          backgroundColor: Color(0xFFDC004E),
+        ),
+      );
+      return;
+    }
+
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() => fotosPetUnico.add(File(pickedFile.path)));
+    }
+  }
+
   Future<void> _selecionarImagem(String genero, int index) async {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
@@ -35,26 +82,36 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
     }
   }
 
-  // 🚀 Validação e prosseguir
+  // 🚀 Validação
   void _prosseguir() {
     if (tipoAnuncio == 'Pet único') {
-      if (especieSelecionada == null || generoSelecionado == null) {
+      if ((!petSemNome && nomeController.text.isEmpty) ||
+          especieSelecionada == null ||
+          generoSelecionado == null ||
+          // 🔧 DESATIVADO PARA TESTE -> fotosPetUnico.isEmpty ||
+          idadeController.text.isEmpty ||
+          racaSelecionada == null ||
+          corSelecionada == null ||
+          corOlhosController.text.isEmpty ||
+          porteSelecionado == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Preencha todos os campos antes de prosseguir.'),
+            content: Text(
+              'Preencha todos os campos obrigatórios antes de prosseguir.',
+            ),
             backgroundColor: Color(0xFFDC004E),
           ),
         );
         return;
       }
     } else {
-      if (especieSelecionada == null ||
-          (qtdMachos + qtdFemeas == 0) ||
-          !_todasFotosSelecionadas()) {
+      if (especieSelecionada == null || (qtdMachos + qtdFemeas == 0)
+      // 🔧 DESATIVADO PARA TESTE -> || !_todasFotosSelecionadas()
+      ) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Preencha todos os campos e adicione todas as fotos.',
+              'Preencha todos os campos obrigatórios antes de prosseguir.',
             ),
             backgroundColor: Color(0xFFDC004E),
           ),
@@ -63,7 +120,7 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
       }
     }
 
-    Navigator.pushNamed(context, '/perdido2');
+    Navigator.pushNamed(context, '/perdido6');
   }
 
   bool _todasFotosSelecionadas() {
@@ -75,7 +132,6 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
     return true;
   }
 
-  // 🔄 Atualiza listas de fotos conforme a quantidade digitada
   void _atualizarListas() {
     fotosPorGenero['Macho'] = List.generate(
       qtdMachos,
@@ -105,15 +161,7 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Tipo de anúncio
-            const Text(
-              'Tipo de Anúncio',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 16,
-                color: Color(0xFFDC004E),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            const Text('Tipo de Anúncio', style: _labelStyle),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: tipoAnuncio,
@@ -127,43 +175,58 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
               ],
               onChanged: (v) => setState(() => tipoAnuncio = v!),
             ),
-
             const SizedBox(height: 20),
 
-            // Espécie
-            const Text(
-              'Espécie',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 16,
-                color: Color(0xFFDC004E),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: especieSelecionada,
-              decoration: _decoracaoCampo(),
-              hint: const Text('Selecione a espécie'),
-              items: especies
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                  .toList(),
-              onChanged: (v) => setState(() => especieSelecionada = v),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Gênero (Pet único)
+            // =====================
+            // 🐾 PET ÚNICO
+            // =====================
             if (tipoAnuncio == 'Pet único') ...[
-              const Text(
-                'Gênero',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 16,
-                  color: Color(0xFFDC004E),
-                  fontWeight: FontWeight.w600,
+              if (!petSemNome)
+                CustomInput(
+                  label: 'Nome do pet',
+                  hint: 'Digite o nome do pet (se houver)',
+                  controller: nomeController,
                 ),
+              if (!petSemNome) const SizedBox(height: 8),
+              Row(
+                children: [
+                  Checkbox(
+                    value: petSemNome,
+                    activeColor: const Color(0xFFDC004E),
+                    onChanged: (v) {
+                      setState(() {
+                        petSemNome = v ?? false;
+                        if (petSemNome) nomeController.clear();
+                      });
+                    },
+                  ),
+                  const Text(
+                    'Pet sem nome',
+                    style: TextStyle(
+                      color: Color(0xFFDC004E),
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
+              const SizedBox(height: 20),
+
+              // Espécie e gênero
+              const Text('Espécie', style: _labelStyle),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: especieSelecionada,
+                decoration: _decoracaoCampo(),
+                hint: const Text('Selecione a espécie'),
+                items: especies
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
+                onChanged: (v) => setState(() => especieSelecionada = v),
+              ),
+              const SizedBox(height: 20),
+
+              const Text('Gênero', style: _labelStyle),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: generoSelecionado,
@@ -174,19 +237,132 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
                     .toList(),
                 onChanged: (v) => setState(() => generoSelecionado = v),
               ),
+              const SizedBox(height: 20),
+
+              // 📸 Fotos (limite 3)
+              const Text(
+                'Fotos (até 3) — opcional por enquanto 🔧',
+                style: _labelStyle,
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  for (int i = 0; i < fotosPetUnico.length; i++)
+                    Stack(
+                      alignment: Alignment.topRight,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.file(
+                            fotosPetUnico[i],
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () =>
+                              setState(() => fotosPetUnico.removeAt(i)),
+                          child: Container(
+                            decoration: const BoxDecoration(
+                              color: Colors.black54,
+                              shape: BoxShape.circle,
+                            ),
+                            padding: const EdgeInsets.all(4),
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  GestureDetector(
+                    onTap: _selecionarImagemUnica,
+                    child: Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: const Color(0xFFDC004E),
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.add_a_photo,
+                        color: Color(0xFFDC004E),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 25),
+
+              // Idade, Raça
+              CustomInput(
+                label: 'Idade (em meses ou anos)',
+                hint: 'Ex: 2 anos',
+                controller: idadeController,
+              ),
+              const SizedBox(height: 20),
+
+              const Text('Raça', style: _labelStyle),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: racaSelecionada,
+                decoration: _decoracaoCampo(),
+                hint: const Text('Selecione a raça'),
+                items: racas
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
+                onChanged: (v) => setState(() => racaSelecionada = v),
+              ),
+              const SizedBox(height: 20),
+
+              // Cor e olhos
+              const Text('Cor predominante', style: _labelStyle),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: corSelecionada,
+                decoration: _decoracaoCampo(),
+                hint: const Text('Selecione a cor'),
+                items: cores
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
+                onChanged: (v) => setState(() => corSelecionada = v),
+              ),
+              const SizedBox(height: 20),
+
+              CustomInput(
+                label: 'Cor dos olhos',
+                hint: 'Ex: Castanhos, azuis...',
+                controller: corOlhosController,
+              ),
+              const SizedBox(height: 20),
+
+              // Porte
+              const Text('Porte do pet', style: _labelStyle),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: porteSelecionado,
+                decoration: _decoracaoCampo(),
+                hint: const Text('Selecione o porte'),
+                items: portes
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
+                onChanged: (v) => setState(() => porteSelecionado = v),
+              ),
             ],
 
-            // Campos de quantidade (Ninhada)
+            // =====================
+            // 🍼 NINHADA
+            // =====================
             if (tipoAnuncio == 'Ninhada de filhotes') ...[
-              const Text(
-                'Quantos filhotes há na ninhada?',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 16,
-                  color: Color(0xFFDC004E),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              const Text('Quantos filhotes há na ninhada?', style: _labelStyle),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -227,19 +403,13 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
               ),
               const SizedBox(height: 25),
 
-              // Upload das fotos
               if (qtdMachos + qtdFemeas > 0)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Adicione uma foto para cada filhote',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 16,
-                        color: Color(0xFFDC004E),
-                        fontWeight: FontWeight.w600,
-                      ),
+                      'Adicione uma foto para cada filhote (opcional)',
+                      style: _labelStyle,
                     ),
                     const SizedBox(height: 10),
                     _buildFotoSection('Macho', qtdMachos),
@@ -253,6 +423,13 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
       ),
     );
   }
+
+  static const _labelStyle = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 16,
+    color: Color(0xFFDC004E),
+    fontWeight: FontWeight.w600,
+  );
 
   InputDecoration _decoracaoCampo() {
     return InputDecoration(
