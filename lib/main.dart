@@ -16,6 +16,10 @@ import 'screens/divulgar_pet/procurando_tutor/criar_anuncio_tutor_03.dart';
 import 'screens/divulgar_pet/procurando_tutor/criar_anuncio_tutor_04.dart';
 import 'screens/divulgar_pet/procurando_tutor/criar_anuncio_tutor_05.dart';
 import 'screens/divulgar_pet/procurando_tutor/criar_anuncio_tutor_06.dart';
+import 'screens/adotar/adotar_home.dart';
+import 'screens/adotar/adotar_detalhes.dart';
+import 'screens/adotar/adotar_interesse.dart';
+import 'screens/adotar/adotar_success.dart';
 import 'screens/success_screen.dart';
 
 void main() {
@@ -50,6 +54,10 @@ class MyApp extends StatelessWidget {
         '/tutor5': (context) => const CriarAnuncioTutor05(),
         '/tutor6': (context) => const CriarAnuncioTutor06(),
         '/success': (context) => const SuccessScreen(),
+        '/adotar_home': (context) => const AdotarHome(),
+        '/adotar_detalhes': (context) => const AdotarDetalhes(),
+        '/adotar_interesse': (context) => const AdotarInteresse(),
+        '/adotar_success': (context) => const AdotarSuccess(),
       },
     );
   }

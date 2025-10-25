@@ -30,18 +30,16 @@ class HomeScreen extends StatelessWidget {
       ),
       body: Stack(
         children: [
-          // 🐱 Gato grande no canto inferior direito (COMENTADO TEMPORARIAMENTE)
-          /*
+          // 🐱 Gato maior no canto inferior direito
           Positioned(
-            bottom: -10,
-            right: -5,
+            bottom: -30, // empurra um pouquinho pra baixo
+            right: -20, // afasta um pouco da borda pra encaixar melhor
             child: Image.asset(
               'assets/images/gatinho.png',
-              height: screenWidth * 0.7, // proporcional à tela
-              fit: BoxFit.cover,
+              height: screenWidth * 0.95, // AUMENTA o tamanho proporcional
+              fit: BoxFit.contain, // mantém proporção real da imagem
             ),
           ),
-          */
 
           // Conteúdo principal
           SingleChildScrollView(
@@ -159,7 +157,7 @@ class HomeScreen extends StatelessWidget {
                   child: FractionallySizedBox(
                     widthFactor: 0.85,
                     child: GestureDetector(
-                      onTap: () => Navigator.pushNamed(context, '/adotar'),
+                      onTap: () => Navigator.pushNamed(context, '/adotar_home'),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           vertical: 18,

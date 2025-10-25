@@ -33,38 +33,22 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
     if (situacaoSelecionada == 'Perdido') {
       Navigator.pushNamed(context, '/perdido2');
     } else if (situacaoSelecionada == 'Procurando Tutor') {
-      Navigator.pushNamed(context, '/tutor2'); // 🔥 atualizado
+      Navigator.pushNamed(context, '/tutor2');
+    } else if (situacaoSelecionada == 'Disponível para Adoção') {
+      Navigator.pushNamed(context, '/adocao01');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return AnuncioBaseScreen(
+      title: 'Criar Anúncio',
+      subtitle: 'Escolha o tipo de divulgação e informe os dados do pet',
       onBack: () => Navigator.pop(context),
       onNext: _prosseguir,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 💬 Mensagem introdutória
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            margin: const EdgeInsets.only(bottom: 20),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFE6EC),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: const Text(
-              'Vamos começar com algumas informações básicas!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                color: Color(0xFFDC004E),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-
           // 🐾 Situação
           const Text(
             'Situação',
@@ -96,19 +80,13 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
                 value: 'Procurando Tutor',
                 child: Text('Procurando Tutor'),
               ),
+              DropdownMenuItem(
+                value: 'Disponível para Adoção',
+                child: Text('Disponível para Adoção'),
+              ),
             ],
             onChanged: (value) => setState(() => situacaoSelecionada = value),
           ),
-          const SizedBox(height: 6),
-          const Text(
-            'Seu pet sumiu ou você encontrou um e quer achar o tutor',
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              color: Color(0xFFFF5C00),
-              fontSize: 13,
-            ),
-          ),
-
           const SizedBox(height: 20),
 
           // 🐶 Espécie
