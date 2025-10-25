@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart'; // ✅ para formatar a data
 import '../../../widgets/anuncio_base_screen.dart';
 import '../../../widgets/custom_input.dart';
 
@@ -20,13 +19,12 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
   // Localização
   String? _estadoSelecionado;
   String? _cidadeSelecionada;
-  String? _bairroSelecionado;
   List<String> _estados = [];
   List<String> _cidades = [];
-  List<String> _bairros = [];
 
-  final TextEditingController nomeOngController = TextEditingController();
+  final TextEditingController nomeLocalController = TextEditingController();
   final TextEditingController telefoneController = TextEditingController();
+  final TextEditingController bairroController = TextEditingController();
   final TextEditingController descricaoController = TextEditingController();
   final TextEditingController dataController = TextEditingController();
 
@@ -42,16 +40,18 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
     _carregarEstados();
   }
 
-  // 📍 Carrega os estados (API IBGE)
+  // 📍 Carrega estados via IBGE
   Future<void> _carregarEstados() async {
-    final url = Uri.parse('https://servicodados.ibge.gov.br/api/v1/localidades/estados');
+    final url = Uri.parse(
+        'https://servicodados.ibge.gov.br/api/v1/localidades/estados');
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
       final List estadosData = json.decode(response.body);
       estadosData.sort((a, b) => a['sigla'].compareTo(b['sigla']));
       setState(() {
-        _estados = estadosData.map<String>((e) => e['sigla'] as String).toList();
+        _estados =
+            estadosData.map<String>((e) => e['sigla'] as String).toList();
       });
     }
   }
@@ -60,8 +60,6 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
   Future<void> _carregarCidades(String uf) async {
     setState(() {
       _cidades = [];
-      _bairroSelecionado = null;
-      _bairros = [];
       _cidadeSelecionada = null;
     });
 
@@ -73,65 +71,8 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
       final List cidadesData = json.decode(response.body);
       cidadesData.sort((a, b) => a['nome'].compareTo(b['nome']));
       setState(() {
-        _cidades = cidadesData.map<String>((e) => e['nome'] as String).toList();
-      });
-    }
-  }
-
-  // 🏘️ Carrega bairros via OpenStreetMap Nominatim
-  Future<void> _carregarBairros(String cidade, String estado) async {
-    setState(() {
-      _bairros = [];
-      _bairroSelecionado = null;
-    });
-
-    final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/search?city=$cidade&state=$estado&country=Brazil&format=json&addressdetails=1&limit=50');
-    final response =
-        await http.get(url, headers: {'User-Agent': 'AppAdocao/1.0'});
-
-    if (response.statusCode == 200) {
-      final List data = json.decode(response.body);
-      final bairros = <String>{};
-
-      for (final item in data) {
-        final address = item['address'];
-        if (address != null) {
-          if (address['suburb'] != null) bairros.add(address['suburb']);
-          if (address['neighbourhood'] != null)
-            bairros.add(address['neighbourhood']);
-        }
-      }
-
-      setState(() {
-        _bairros = bairros.toList()..sort();
-      });
-    }
-  }
-
-  // 📅 Selecionar data
-  Future<void> _selecionarData(BuildContext context) async {
-    final DateTime? selecionada = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      locale: const Locale('pt', 'BR'),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFFDC004E),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (selecionada != null) {
-      setState(() {
-        dataController.text = DateFormat('dd/MM/yyyy').format(selecionada);
+        _cidades =
+            cidadesData.map<String>((e) => e['nome'] as String).toList();
       });
     }
   }
@@ -172,7 +113,7 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
             ),
             const SizedBox(height: 10),
 
-            // 🔘 Chips de seleção de local
+            // 🔘 Seleção de local
             Wrap(
               spacing: 10,
               runSpacing: 8,
@@ -205,16 +146,19 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
 
             const SizedBox(height: 25),
 
-            // ONG — campo adicional
-            if (_localSelecionado == 'ONG')
-              CustomInput(
-                label: 'Nome da ONG onde o pet está',
-                hint: 'Digite o nome da ONG',
-                controller: nomeOngController,
-                maxLines: 1,
-              ),
+            // 🏠 Nome da ONG / Abrigo / Lar
+            CustomInput(
+              label: _localSelecionado == 'ONG'
+                  ? 'Nome da ONG onde o pet está'
+                  : _localSelecionado == 'Abrigo'
+                      ? 'Nome do abrigo'
+                      : 'Nome do lar temporário',
+              hint: 'Digite o nome do local',
+              controller: nomeLocalController,
+              maxLines: 1,
+            ),
 
-            const SizedBox(height: 15),
+            const SizedBox(height: 20),
 
             // Estado
             const Text(
@@ -253,27 +197,18 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
                 items: _cidades
                     .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                     .toList(),
-                onChanged: (v) {
-                  setState(() => _cidadeSelecionada = v);
-                  if (v != null && _estadoSelecionado != null) {
-                    _carregarBairros(v, _estadoSelecionado!);
-                  }
-                },
+                onChanged: (v) => setState(() => _cidadeSelecionada = v),
               ),
 
             const SizedBox(height: 15),
 
             // Bairro
-            if (_cidades.isNotEmpty)
-              DropdownButtonFormField<String>(
-                value: _bairroSelecionado,
-                decoration: _decoracaoCampo(),
-                hint: const Text('Selecione o bairro'),
-                items: _bairros
-                    .map((b) => DropdownMenuItem(value: b, child: Text(b)))
-                    .toList(),
-                onChanged: (v) => setState(() => _bairroSelecionado = v),
-              ),
+            CustomInput(
+              label: 'Bairro',
+              hint: 'Digite o bairro onde o pet está',
+              controller: bairroController,
+              maxLines: 1,
+            ),
 
             const SizedBox(height: 15),
 
@@ -287,7 +222,7 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
 
             const SizedBox(height: 15),
 
-            // Checkbox de animal achado
+            // Checkbox: Animal achado
             Row(
               children: [
                 Checkbox(
@@ -309,7 +244,6 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
               ],
             ),
 
-            // Campos extras se marcado
             if (_animalPerdido) ...[
               CustomInput(
                 label: 'Descrição do local e do pet',
@@ -318,16 +252,11 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
                 maxLines: 3,
               ),
               const SizedBox(height: 15),
-              GestureDetector(
-                onTap: () => _selecionarData(context),
-                child: AbsorbPointer(
-                  child: CustomInput(
-                    label: 'Data que encontrei (opcional)',
-                    hint: 'Toque para selecionar a data',
-                    controller: dataController,
-                    maxLines: 1,
-                  ),
-                ),
+              CustomInput(
+                label: 'Data que encontrei (opcional)',
+                hint: 'Ex: 08/10/2025',
+                controller: dataController,
+                maxLines: 1,
               ),
             ],
 

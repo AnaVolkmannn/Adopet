@@ -21,48 +21,63 @@ class AnuncioBaseScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF7E6),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFFFF7E6),
-        elevation: 0,
-        titleSpacing: 24,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFDC004E),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(115), // 🔧 altura mais equilibrada
+        child: AppBar(
+          backgroundColor: const Color(0xFFFFF7E6),
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          flexibleSpace: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Color(0xFFDC004E)),
+                    onPressed: onBack,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center, // 🩷 centraliza verticalmente
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFDC004E),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 13,
+                            color: Color(0xFFFF5C00),
+                            height: 1.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.menu, color: Color(0xFFDC004E)),
+                    onPressed: () {},
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: const TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 14,
-                color: Color(0xFFFF5C00),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.menu, color: Color(0xFFDC004E)),
-            onPressed: () {},
           ),
-        ],
+        ),
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            24,
-            10,
-            24,
-            80,
-          ), // espaço inferior fixo pros botões
+          padding: const EdgeInsets.fromLTRB(24, 10, 24, 80),
           child: SingleChildScrollView(child: child),
         ),
       ),
