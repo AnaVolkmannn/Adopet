@@ -5,22 +5,22 @@ class AdotarHome extends StatelessWidget {
 
   final List<Map<String, String>> pets = const [
     {
-      'nome': 'Luna',
-      'idade': '2 anos',
-      'especie': 'Gato',
-      'imagem': 'https://placekitten.com/300/300',
+      'nome': 'CACIQUE',
+      'idade': '2 meses',
+      'especie': 'Cachorro',
+      'imagem': 'https://placedog.net/400/400',
     },
     {
-      'nome': 'Bolt',
+      'nome': 'BOLT',
       'idade': '1 ano',
       'especie': 'Cachorro',
       'imagem': 'https://placedog.net/400/400',
     },
     {
-      'nome': 'Mingau',
+      'nome': 'MEL',
       'idade': '3 anos',
-      'especie': 'Gato',
-      'imagem': 'https://placekitten.com/301/301',
+      'especie': 'Cachorro',
+      'imagem': 'https://placedog.net/400/400',
     },
   ];
 

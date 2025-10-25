@@ -7,6 +7,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -18,7 +19,13 @@ class HomeScreen extends StatelessWidget {
         title: Padding(
           padding: const EdgeInsets.only(left: 20),
           child: Row(
-            children: [Image.asset('assets/images/logo.png', height: 50)],
+            children: [
+              Image.asset(
+                'assets/images/logo.png',
+                height: 45,
+                fit: BoxFit.contain,
+              ),
+            ],
           ),
         ),
         actions: [
@@ -30,14 +37,36 @@ class HomeScreen extends StatelessWidget {
       ),
       body: Stack(
         children: [
-          // 🐱 Gato maior no canto inferior direito
+          // 🐱 Gato local no rodapé
           Positioned(
-            bottom: -30, // empurra um pouquinho pra baixo
-            right: -20, // afasta um pouco da borda pra encaixar melhor
-            child: Image.asset(
-              'assets/images/gatinho.png',
-              height: screenWidth * 0.95, // AUMENTA o tamanho proporcional
-              fit: BoxFit.contain, // mantém proporção real da imagem
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Stack(
+              children: [
+                Image.asset(
+                  'assets/images/gatinho.png',
+                  height: screenHeight * 0.42, // proporção ajustada
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+                // leve gradiente pra integrar o gato ao fundo
+                Container(
+                  height: screenHeight * 0.42,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFFFFF7E6),
+                        Color(0xFFFFF7E6),
+                        Colors.transparent,
+                      ],
+                      stops: [0.0, 0.25, 1.0],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -82,7 +111,7 @@ class HomeScreen extends StatelessWidget {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: FractionallySizedBox(
-                    widthFactor: 0.85, // desloca pra esquerda
+                    widthFactor: 0.85,
                     child: GestureDetector(
                       onTap: () => Navigator.pushNamed(context, '/divulgar'),
                       child: Container(
