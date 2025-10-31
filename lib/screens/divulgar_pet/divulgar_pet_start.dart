@@ -29,11 +29,6 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
   String? porteSelecionado;
   final List<File> fotosPetUnico = [];
 
-  // Ninhada
-  int qtdMachos = 0;
-  int qtdFemeas = 0;
-  final Map<String, List<File?>> fotosPorGenero = {'Macho': [], 'Fêmea': []};
-
   final List<String> especies = ['Gato', 'Cachorro'];
   final List<String> generos = ['Macho', 'Fêmea'];
   final List<String> cores = [
@@ -64,74 +59,34 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
     }
   }
 
-  Future<void> _selecionarImagem(String genero, int index) async {
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        fotosPorGenero[genero]![index] = File(pickedFile.path);
-      });
-    }
-  }
-
   // 🚀 Validação
   void _prosseguir() {
     bool idadeValida = idadeAnosController.text.isNotEmpty ||
         idadeMesesController.text.isNotEmpty;
 
-    if (tipoAnuncio == 'Pet único') {
-      if ((!petSemNome && nomeController.text.isEmpty) ||
-          especieSelecionada == null ||
-          generoSelecionado == null ||
-          !idadeValida ||
-          corSelecionada == null ||
-          corOlhosController.text.isEmpty ||
-          porteSelecionado == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Preencha todos os campos obrigatórios antes de prosseguir.',
-            ),
-            backgroundColor: Color(0xFFDC004E),
+    // ⚠️ Agora não exige fotos
+    if ((!petSemNome && nomeController.text.isEmpty) ||
+        especieSelecionada == null ||
+        generoSelecionado == null ||
+        !idadeValida ||
+        corSelecionada == null ||
+        porteSelecionado == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Preencha todos os campos obrigatórios antes de prosseguir.',
           ),
-        );
-        return;
-      }
-    } else {
-      if (especieSelecionada == null || (qtdMachos + qtdFemeas == 0)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Preencha todos os campos obrigatórios antes de prosseguir.',
-            ),
-            backgroundColor: Color(0xFFDC004E),
-          ),
-        );
-        return;
-      }
+          backgroundColor: Color(0xFFDC004E),
+        ),
+      );
+      return;
     }
 
     Navigator.pushNamed(context, '/perdido6');
   }
 
-  void _atualizarListas() {
-    fotosPorGenero['Macho'] = List.generate(
-      qtdMachos,
-      (index) => fotosPorGenero['Macho']!.length > index
-          ? fotosPorGenero['Macho']![index]
-          : null,
-    );
-    fotosPorGenero['Fêmea'] = List.generate(
-      qtdFemeas,
-      (index) => fotosPorGenero['Fêmea']!.length > index
-          ? fotosPorGenero['Fêmea']![index]
-          : null,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    _atualizarListas();
-
     return AnuncioBaseScreen(
       title: 'Criar Anúncio',
       subtitle: 'Divulgue um pet ou uma ninhada para adoção responsável',
@@ -141,20 +96,7 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Tipo de anúncio
-            const Text('Tipo de Anúncio', style: _labelStyle),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: tipoAnuncio,
-              decoration: _decoracaoCampo(),
-              items: const [
-                DropdownMenuItem(value: 'Pet único', child: Text('Pet único')),
-              ],
-              onChanged: (v) => setState(() => tipoAnuncio = v!),
-            ),
-            const SizedBox(height: 20),
-
-            if (tipoAnuncio == 'Pet único') _buildPetUnico(),
+            _buildPetUnico(),
           ],
         ),
       ),
@@ -173,7 +115,7 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
             label: 'Nome do pet',
             hint: 'Digite o nome do pet (se houver)',
             controller: nomeController,
-            maxLines: 1, // ✅ adicionado
+            maxLines: 1,
           ),
         if (!petSemNome) const SizedBox(height: 8),
         Row(
@@ -240,8 +182,7 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
         const SizedBox(height: 20),
 
         // 📸 Fotos
-        const Text('Fotos (até 3) — opcional por enquanto 🔧',
-            style: _labelStyle),
+        const Text('Fotos (até 3) — opcional', style: _labelStyle),
         const SizedBox(height: 10),
         Wrap(
           spacing: 10,
@@ -277,6 +218,7 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
                   ),
                 ],
               ),
+            // 📸 Placeholder para adicionar novas imagens
             GestureDetector(
               onTap: _selecionarImagemUnica,
               child: Container(
@@ -310,7 +252,6 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
                 hint: 'Ex: 2',
                 controller: idadeAnosController,
                 keyboardType: TextInputType.number,
-                onChanged: (v) {},
               ),
             ),
             const SizedBox(width: 16),
@@ -320,7 +261,6 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
                 hint: 'Ex: 6',
                 controller: idadeMesesController,
                 keyboardType: TextInputType.number,
-                onChanged: (v) {},
               ),
             ),
           ],
@@ -339,12 +279,6 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
           onChanged: (v) => setState(() => corSelecionada = v),
         ),
         const SizedBox(height: 20),
-
-        CustomInput(
-          label: 'Cor dos olhos',
-          hint: 'Ex: Castanhos, azuis...',
-          controller: corOlhosController,
-        ),
       ],
     );
   }
