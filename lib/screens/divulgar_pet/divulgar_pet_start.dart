@@ -149,17 +149,12 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
               decoration: _decoracaoCampo(),
               items: const [
                 DropdownMenuItem(value: 'Pet único', child: Text('Pet único')),
-                DropdownMenuItem(
-                  value: 'Ninhada de filhotes',
-                  child: Text('Ninhada de filhotes'),
-                ),
               ],
               onChanged: (v) => setState(() => tipoAnuncio = v!),
             ),
             const SizedBox(height: 20),
 
             if (tipoAnuncio == 'Pet único') _buildPetUnico(),
-            if (tipoAnuncio == 'Ninhada de filhotes') _buildNinhada(),
           ],
         ),
       ),
@@ -351,131 +346,6 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
           controller: corOlhosController,
         ),
       ],
-    );
-  }
-
-  // -------------------------------
-  // 🍼 NINHADA
-  // -------------------------------
-  Widget _buildNinhada() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Espécie', style: _labelStyle),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          value: especieSelecionada,
-          decoration: _decoracaoCampo(),
-          hint: const Text('Selecione a espécie'),
-          items: especies
-              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-              .toList(),
-          onChanged: (v) => setState(() => especieSelecionada = v),
-        ),
-        const SizedBox(height: 20),
-
-        const Text('Quantos filhotes há na ninhada?', style: _labelStyle),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: CustomInput(
-                label: 'Machos',
-                hint: '0',
-                controller: TextEditingController(text: qtdMachos.toString()),
-                keyboardType: TextInputType.number,
-                onChanged: (v) {
-                  setState(() {
-                    qtdMachos = int.tryParse(v) ?? 0;
-                    _atualizarListas();
-                  });
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: CustomInput(
-                label: 'Fêmeas',
-                hint: '0',
-                controller: TextEditingController(text: qtdFemeas.toString()),
-                keyboardType: TextInputType.number,
-                onChanged: (v) {
-                  setState(() {
-                    qtdFemeas = int.tryParse(v) ?? 0;
-                    _atualizarListas();
-                  });
-                },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 25),
-
-        if (qtdMachos + qtdFemeas > 0)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Adicione uma foto para cada filhote (opcional)',
-                style: _labelStyle,
-              ),
-              const SizedBox(height: 10),
-              _buildFotoSection('Macho', qtdMachos),
-              const SizedBox(height: 16),
-              _buildFotoSection('Fêmea', qtdFemeas),
-            ],
-          ),
-      ],
-    );
-  }
-
-  Widget _buildFotoSection(String genero, int quantidade) {
-    if (quantidade == 0) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: List.generate(quantidade, (index) {
-        final foto = fotosPorGenero[genero]![index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: GestureDetector(
-            onTap: () => _selecionarImagem(genero, index),
-            child: Container(
-              height: 140,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(15),
-                border:
-                    Border.all(color: const Color(0xFFDC004E), width: 1.5),
-                image: foto != null
-                    ? DecorationImage(
-                        image: FileImage(foto),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child: foto == null
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.add_a_photo,
-                              color: Color(0xFFDC004E), size: 30),
-                          const SizedBox(height: 5),
-                          Text(
-                            '$genero ${index + 1}',
-                            style: const TextStyle(
-                              color: Color(0xFFDC004E),
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : null,
-            ),
-          ),
-        );
-      }),
     );
   }
 
