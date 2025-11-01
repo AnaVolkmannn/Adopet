@@ -43,12 +43,12 @@ class MeusAnunciosScreen extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: 25),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(15),
                 boxShadow: const [
                   BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 6,
-                    offset: Offset(0, 2),
+                    color: Color(0xFFFFB6C1), // 💖 sombra rosa suave
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
                   ),
                 ],
               ),
