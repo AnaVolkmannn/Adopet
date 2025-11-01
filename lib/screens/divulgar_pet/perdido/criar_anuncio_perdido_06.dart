@@ -12,40 +12,36 @@ class CriarAnuncioPerdido06 extends StatefulWidget {
 }
 
 class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
-  String? _localSelecionado = 'Lar Temporário';
   bool _declaracaoAceita = false;
-  bool _animalPerdido = false;
+  bool _temIdentificacao = false;
 
-  // Localização
+  String? _tipoSituacao; // “Doacao” ou “Achado”
   String? _estadoSelecionado;
   String? _cidadeSelecionada;
   List<String> _estados = [];
   List<String> _cidades = [];
 
-  final TextEditingController nomeLocalController = TextEditingController();
+  // Controladores
   final TextEditingController telefoneController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
   final TextEditingController bairroController = TextEditingController();
+  final TextEditingController pontoReferenciaController =
+      TextEditingController();
   final TextEditingController descricaoController = TextEditingController();
   final TextEditingController dataController = TextEditingController();
-
-  final List<String> locais = [
-    'Lar Temporário',
-    'Abrigo',
-    'ONG',
-  ];
 
   @override
   void initState() {
     super.initState();
+    _tipoSituacao = null; // ✅ Garante que o dropdown comece limpo
     _carregarEstados();
   }
 
-  // 📍 Carrega estados via IBGE
+  // 📍 IBGE: estados
   Future<void> _carregarEstados() async {
     final url = Uri.parse(
         'https://servicodados.ibge.gov.br/api/v1/localidades/estados');
     final response = await http.get(url);
-
     if (response.statusCode == 200) {
       final List estadosData = json.decode(response.body);
       estadosData.sort((a, b) => a['sigla'].compareTo(b['sigla']));
@@ -56,7 +52,7 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
     }
   }
 
-  // 🏙️ Carrega cidades de acordo com o estado selecionado
+  // 🏙️ IBGE: cidades
   Future<void> _carregarCidades(String uf) async {
     setState(() {
       _cidades = [];
@@ -66,7 +62,6 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
     final url = Uri.parse(
         'https://servicodados.ibge.gov.br/api/v1/localidades/estados/$uf/municipios');
     final response = await http.get(url);
-
     if (response.statusCode == 200) {
       final List cidadesData = json.decode(response.body);
       cidadesData.sort((a, b) => a['nome'].compareTo(b['nome']));
@@ -77,16 +72,70 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
     }
   }
 
+  // ✅ Validação de data dd/mm/aaaa (opcional)
+  bool _validarData(String valor) {
+    final regex =
+        RegExp(r'^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/[0-9]{4}$');
+    if (!regex.hasMatch(valor)) return false;
+
+    try {
+      final partes = valor.split('/');
+      final dia = int.parse(partes[0]);
+      final mes = int.parse(partes[1]);
+      final ano = int.parse(partes[2]);
+      final data = DateTime(ano, mes, dia);
+      return data.day == dia && data.month == mes && data.year == ano;
+    } catch (_) {
+      return false;
+    }
+  }
+
   void _proximoPasso() {
-    if (!_declaracaoAceita) {
+    if (_tipoSituacao == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Você precisa aceitar a Declaração de Veracidade.'),
+          content: Text('Escolha o tipo de anúncio: doar ou encontrado.'),
           backgroundColor: Color(0xFFDC004E),
         ),
       );
       return;
     }
+
+    if (!_declaracaoAceita) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Você precisa aceitar a Declaração de Veracidade.'),
+          backgroundColor: Color(0xFFDC004E),
+        ),
+      );
+      return;
+    }
+
+    if (dataController.text.isNotEmpty &&
+        !_validarData(dataController.text.trim())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Digite uma data válida no formato DD/MM/AAAA.'),
+          backgroundColor: Color(0xFFDC004E),
+        ),
+      );
+      return;
+    }
+
+    // Aqui você poderia montar o objeto para enviar à API, ex:
+    // final anuncio = {
+    //   'tipoSituacao': _tipoSituacao,
+    //   'estado': _estadoSelecionado,
+    //   'cidade': _cidadeSelecionada,
+    //   'bairro': bairroController.text,
+    //   'referencia': pontoReferenciaController.text,
+    //   'telefone': telefoneController.text,
+    //   'email': emailController.text,
+    //   'descricao': descricaoController.text,
+    //   'temIdentificacao': _temIdentificacao,
+    //   'data': dataController.text,
+    // };
 
     Navigator.pushNamedAndRemoveUntil(context, '/success', (route) => false);
   }
@@ -94,16 +143,21 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
   @override
   Widget build(BuildContext context) {
     return AnuncioBaseScreen(
-      onBack: () => Navigator.pop(context),
+      onBack: () {
+        setState(() {
+          _tipoSituacao = null; // ✅ Limpa valor ao voltar
+        });
+        Navigator.pop(context);
+      },
       onNext: _proximoPasso,
       title: 'Criar Anúncio',
-      subtitle: 'Ao criar um anúncio, você terá acesso ao Painel de Busca',
+      subtitle: 'Informe os detalhes para divulgar seu pet',
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Onde o pet está agora',
+              'Tipo de anúncio',
               style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 16,
@@ -113,56 +167,25 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
             ),
             const SizedBox(height: 10),
 
-            // 🔘 Seleção de local
-            Wrap(
-              spacing: 10,
-              runSpacing: 8,
-              children: locais.map((opcao) {
-                final selecionado = _localSelecionado == opcao;
-                return ChoiceChip(
-                  label: Text(
-                    opcao,
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      color: selecionado ? Colors.white : const Color(0xFFDC004E),
-                      fontWeight: selecionado ? FontWeight.bold : FontWeight.w500,
-                    ),
-                  ),
-                  selected: selecionado,
-                  selectedColor: const Color(0xFFDC004E),
-                  backgroundColor: Colors.transparent,
-                  shape: StadiumBorder(
-                    side: BorderSide(
-                      color: const Color(0xFFDC004E).withOpacity(0.6),
-                      width: 1.5,
-                    ),
-                  ),
-                  onSelected: (_) {
-                    setState(() => _localSelecionado = opcao);
-                  },
-                );
-              }).toList(),
+            // 🔽 Dropdown de tipo de anúncio
+            DropdownButtonFormField<String>(
+              value: _tipoSituacao,
+              decoration: _decoracaoCampo(),
+              hint: const Text('Selecione o tipo de anúncio'),
+              items: const [
+                DropdownMenuItem(
+                    value: 'Doacao', child: Text('🩷 Quero doar um pet')),
+                DropdownMenuItem(
+                    value: 'Achado',
+                    child: Text('🕵️ Encontrei um pet perdido')),
+              ],
+              onChanged: (v) => setState(() => _tipoSituacao = v),
             ),
 
             const SizedBox(height: 25),
 
-            // 🏠 Nome da ONG / Abrigo / Lar
-            CustomInput(
-              label: _localSelecionado == 'ONG'
-                  ? 'Nome da ONG onde o pet está'
-                  : _localSelecionado == 'Abrigo'
-                      ? 'Nome do abrigo'
-                      : 'Nome do lar temporário',
-              hint: 'Digite o nome do local',
-              controller: nomeLocalController,
-              maxLines: 1,
-            ),
-
-            const SizedBox(height: 20),
-
-            // Estado
             const Text(
-              'Estado',
+              'Localização do pet',
               style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 16,
@@ -170,13 +193,15 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
                 color: Color(0xFFDC004E),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
+
             DropdownButtonFormField<String>(
               value: _estadoSelecionado,
               decoration: _decoracaoCampo(),
               hint: const Text('Selecione o estado'),
               items: _estados
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .map((e) =>
+                      DropdownMenuItem(value: e, child: Text(e)))
                   .toList(),
               onChanged: (v) {
                 setState(() {
@@ -185,54 +210,91 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
                 if (v != null) _carregarCidades(v);
               },
             ),
-
             const SizedBox(height: 15),
 
-            // Cidade
             if (_estadoSelecionado != null)
               DropdownButtonFormField<String>(
                 value: _cidadeSelecionada,
                 decoration: _decoracaoCampo(),
                 hint: const Text('Selecione a cidade'),
                 items: _cidades
-                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .map((c) =>
+                        DropdownMenuItem(value: c, child: Text(c)))
                     .toList(),
-                onChanged: (v) => setState(() => _cidadeSelecionada = v),
+                onChanged: (v) =>
+                    setState(() => _cidadeSelecionada = v),
               ),
-
             const SizedBox(height: 15),
 
-            // Bairro
             CustomInput(
               label: 'Bairro',
               hint: 'Digite o bairro onde o pet está',
               controller: bairroController,
               maxLines: 1,
             ),
-
             const SizedBox(height: 15),
 
-            // Telefone
             CustomInput(
-              label: 'Telefone com WhatsApp',
-              hint: 'Insira seu telefone com DDD',
-              controller: telefoneController,
+              label: 'Ponto de referência (opcional)',
+              hint: 'Ex: próximo à escola, praça ou mercado',
+              controller: pontoReferenciaController,
               maxLines: 1,
             ),
 
+            const SizedBox(height: 25),
+
+            const Text(
+              'Informações de contato',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFFDC004E),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            CustomInput(
+              label: 'Telefone com WhatsApp',
+              hint: '(DDD) 99999-9999',
+              controller: telefoneController,
+              maxLines: 1,
+              keyboardType: TextInputType.phone,
+            ),
             const SizedBox(height: 15),
 
-            // Checkbox: Animal achado
+            CustomInput(
+              label: 'E-mail (opcional)',
+              hint: 'Digite seu e-mail de contato',
+              controller: emailController,
+              maxLines: 1,
+              keyboardType: TextInputType.emailAddress,
+            ),
+
+            const SizedBox(height: 25),
+
+            const Text(
+              'Detalhes adicionais',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFFDC004E),
+              ),
+            ),
+            const SizedBox(height: 10),
+
             Row(
               children: [
                 Checkbox(
-                  value: _animalPerdido,
+                  value: _temIdentificacao,
                   activeColor: const Color(0xFFDC004E),
-                  onChanged: (v) => setState(() => _animalPerdido = v ?? false),
+                  onChanged: (v) =>
+                      setState(() => _temIdentificacao = v ?? false),
                 ),
                 const Expanded(
                   child: Text(
-                    'Animal achado perdido ou abandonado',
+                    'O pet tem coleira, placa ou microchip?',
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 15,
@@ -244,25 +306,29 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
               ],
             ),
 
-            if (_animalPerdido) ...[
-              CustomInput(
-                label: 'Descrição do local e do pet',
-                hint: 'Ex: encontrei perto da praça, estava assustado...',
-                controller: descricaoController,
-                maxLines: 3,
-              ),
-              const SizedBox(height: 15),
-              CustomInput(
-                label: 'Data que encontrei (opcional)',
-                hint: 'Ex: 08/10/2025',
-                controller: dataController,
-                maxLines: 1,
-              ),
-            ],
+            const SizedBox(height: 10),
+
+            CustomInput(
+              label: 'Descrição do pet e da situação',
+              hint:
+                  'Conte detalhes sobre o pet e o motivo do anúncio',
+              controller: descricaoController,
+              maxLines: 3,
+            ),
+
+            const SizedBox(height: 15),
+
+            CustomInput(
+              label: 'Data do ocorrido (opcional)',
+              hint: 'Ex: 10/05/2025',
+              controller: dataController,
+              maxLines: 1,
+              keyboardType: TextInputType.datetime,
+            ),
 
             const SizedBox(height: 25),
 
-            // Declaração
+            // ✅ Declaração final
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -286,8 +352,8 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
                   const Expanded(
                     child: Text(
                       'Declaração de Veracidade\n'
-                      'Certifico que todas as informações fornecidas são precisas e atualizadas, '
-                      'assumindo total responsabilidade pela divulgação deste pet.',
+                      'Confirmo que as informações fornecidas são verdadeiras e atualizadas, '
+                      'e autorizo a divulgação deste pet na plataforma.',
                       style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 13,
@@ -310,7 +376,8 @@ class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
       fillColor: const Color(0xFFFFF7E6),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(15),
-        borderSide: const BorderSide(color: Color(0xFFDC004E)),
+        borderSide:
+            const BorderSide(color: Color(0xFFDC004E)),
       ),
     );
   }
