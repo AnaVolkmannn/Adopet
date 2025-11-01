@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'custom_button.dart';
+import 'custom_drawer.dart'; // 👈 importa o menu lateral
 
 class AnuncioBaseScreen extends StatelessWidget {
   final Widget child;
@@ -20,9 +21,15 @@ class AnuncioBaseScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // 🌈 Cor de fundo padrão
       backgroundColor: const Color(0xFFFFF7E6),
+
+      // ☰ Menu lateral (Drawer global)
+      endDrawer: const CustomDrawer(),
+
+      // 🩷 Cabeçalho fixo
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(115), // 🔧 altura mais equilibrada
+        preferredSize: const Size.fromHeight(115),
         child: AppBar(
           backgroundColor: const Color(0xFFFFF7E6),
           elevation: 0,
@@ -33,14 +40,18 @@ class AnuncioBaseScreen extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 🔙 Botão de voltar
                   IconButton(
                     icon: const Icon(Icons.arrow_back, color: Color(0xFFDC004E)),
                     onPressed: onBack,
                   ),
+
                   const SizedBox(width: 4),
+
+                  // 🩷 Título e subtítulo
                   Expanded(
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center, // 🩷 centraliza verticalmente
+                      mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -65,9 +76,13 @@ class AnuncioBaseScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.menu, color: Color(0xFFDC004E)),
-                    onPressed: () {},
+
+                  // ☰ Botão de menu funcional (abre o Drawer)
+                  Builder(
+                    builder: (context) => IconButton(
+                      icon: const Icon(Icons.menu, color: Color(0xFFDC004E)),
+                      onPressed: () => Scaffold.of(context).openEndDrawer(),
+                    ),
                   ),
                 ],
               ),
@@ -75,12 +90,16 @@ class AnuncioBaseScreen extends StatelessWidget {
           ),
         ),
       ),
+
+      // 📄 Conteúdo da tela filha
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 10, 24, 80),
           child: SingleChildScrollView(child: child),
         ),
       ),
+
+      // 🩶 Rodapé fixo com botões padrão
       bottomSheet: Container(
         color: const Color(0xFFFFF7E6),
         padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
