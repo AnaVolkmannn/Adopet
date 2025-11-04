@@ -10,7 +10,8 @@ class CustomDrawer extends StatelessWidget {
 
     return Align(
       alignment: Alignment.centerRight,
-      child: Material( // ✅ importante: permite que cliques e sombras funcionem
+      child: Material(
+        // ✅ importante: permite que cliques e sombras funcionem
         color: Colors.transparent,
         child: Container(
           width: screenWidth * 0.75, // 75% da largura da tela
@@ -23,10 +24,13 @@ class CustomDrawer extends StatelessWidget {
             ),
           ),
           child: SafeArea(
-            child: SingleChildScrollView( // ✅ impede overflow
+            child: SingleChildScrollView(
+              // ✅ impede overflow
               physics: const BouncingScrollPhysics(),
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 30), // evita corte no fim
+                padding: const EdgeInsets.only(
+                  bottom: 30,
+                ), // evita corte no fim
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -72,7 +76,8 @@ class CustomDrawer extends StatelessWidget {
                       context,
                       icon: Icons.campaign,
                       label: 'Meus anúncios',
-                      onTap: () => Navigator.pushNamed(context, '/meus_anuncios'),
+                      onTap: () =>
+                          Navigator.pushNamed(context, '/meus_anuncios'),
                     ),
 
                     _buildMenuItem(
@@ -86,7 +91,7 @@ class CustomDrawer extends StatelessWidget {
                       context,
                       icon: Icons.add_circle_outline,
                       label: 'Criar anúncio',
-                      onTap: () => Navigator.pushNamed(context, '/divulgar01'),
+                      onTap: () => Navigator.pushNamed(context, '/divulgar1'),
                     ),
 
                     const SizedBox(height: 10),

@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../../widgets/anuncio_base_screen.dart';
 import '../../widgets/custom_input.dart';
 
@@ -16,109 +14,18 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
   String? _estadoSelecionado;
   String? _cidadeSelecionada;
 
-  List<Map<String, String>> _estados =
-      []; // [{sigla:'SC', nome:'Santa Catarina'}]
-  List<String> _cidades = [];
-
-  bool _loadingEstados = false;
-  bool _loadingCidades = false;
-
   final TextEditingController descricaoController = TextEditingController();
   final TextEditingController dataController = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    _carregarEstados();
-  }
-
-  // 📍 IBGE: estados
-  Future<void> _carregarEstados() async {
-    setState(() => _loadingEstados = true);
-    try {
-      final url = Uri.parse(
-        'https://servicodados.ibge.gov.br/api/v1/localidades/estados',
-      );
-      final response = await http.get(url);
-
-      if (response.statusCode == 200) {
-        final List estadosData = json.decode(response.body);
-        estadosData.sort((a, b) => a['nome'].compareTo(b['nome']));
-        setState(() {
-          _estados = estadosData
-              .map<Map<String, String>>(
-                (e) => {
-                  'sigla': (e['sigla'] as String),
-                  'nome': (e['nome'] as String),
-                },
-              )
-              .toList();
-        });
-      } else {
-        throw Exception('Status ${response.statusCode}');
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Falha ao carregar estados: $e'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    } finally {
-      setState(() => _loadingEstados = false);
-    }
-  }
-
-  // 🏙️ IBGE: cidades
-  Future<void> _carregarCidades(String uf) async {
-    setState(() {
-      _loadingCidades = true;
-      _cidades = [];
-      _cidadeSelecionada = null;
-    });
-    try {
-      final url = Uri.parse(
-        'https://servicodados.ibge.gov.br/api/v1/localidades/estados/uf/municipios',
-      );
-      final response = await http.get(url);
-
-      if (response.statusCode == 200) {
-        final List cidadesData = json.decode(response.body);
-        cidadesData.sort((a, b) => a['nome'].compareTo(b['nome']));
-        setState(() {
-          _cidades = cidadesData
-              .map<String>((e) => e['nome'] as String)
-              .toList();
-        });
-      } else {
-        throw Exception('Status ${response.statusCode}');
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Falha ao carregar cidades: $e'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    } finally {
-      setState(() => _loadingCidades = false);
-    }
-  }
-
-  bool _validarData(String valor) {
-    final regex = RegExp(
-      r'^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/[0-9]{4}$',
-    );
-    if (!regex.hasMatch(valor)) return false;
-    try {
-      final p = valor.split('/');
-      final dia = int.parse(p[0]), mes = int.parse(p[1]), ano = int.parse(p[2]);
-      final data = DateTime(ano, mes, dia);
-      return data.day == dia && data.month == mes && data.year == ano;
-    } catch (_) {
-      return false;
-    }
-  }
+  // 🗺️ Lista local de estados e cidades
+  final Map<String, List<String>> _estadosECidades = {
+    'SC': ['Florianópolis', 'Joinville', 'Blumenau', 'Criciúma', 'Chapecó'],
+    'SP': ['São Paulo', 'Campinas', 'Santos', 'Ribeirão Preto', 'Sorocaba'],
+    'RJ': ['Rio de Janeiro', 'Niterói', 'Petrópolis', 'Volta Redonda'],
+    'RS': ['Porto Alegre', 'Caxias do Sul', 'Pelotas', 'Santa Maria'],
+    'PR': ['Curitiba', 'Londrina', 'Maringá', 'Cascavel'],
+    'MG': ['Belo Horizonte', 'Uberlândia', 'Juiz de Fora', 'Montes Claros'],
+  };
 
   void _proximoPasso() {
     if (_tipoSituacao == null) {
@@ -134,16 +41,6 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Selecione o estado e a cidade.'),
-          backgroundColor: Color(0xFFDC004E),
-        ),
-      );
-      return;
-    }
-    if (dataController.text.isNotEmpty &&
-        !_validarData(dataController.text.trim())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Digite uma data válida no formato DD/MM/AAAA.'),
           backgroundColor: Color(0xFFDC004E),
         ),
       );
@@ -207,47 +104,34 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
             const SizedBox(height: 10),
 
             // 🔽 Estado
-            _loadingEstados
-                ? const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Center(child: CircularProgressIndicator()),
+            DropdownButtonFormField<String>(
+              isExpanded: true,
+              value: _estadoSelecionado,
+              decoration: _decoracaoCampo(),
+              hint: const Text('Selecione o estado'),
+              items: _estadosECidades.keys
+                  .map(
+                    (sigla) =>
+                        DropdownMenuItem(value: sigla, child: Text(sigla)),
                   )
-                : DropdownButtonFormField<String>(
-                    isExpanded: true,
-                    value: _estadoSelecionado,
-                    decoration: _decoracaoCampo(),
-                    hint: const Text('Selecione o estado'),
-                    items: _estados
-                        .map(
-                          (e) => DropdownMenuItem(
-                            value: e['sigla'],
-                            child: Text('${e['sigla']} - ${e['nome']}'),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) {
-                      setState(() {
-                        _estadoSelecionado = v;
-                      });
-                      if (v != null) _carregarCidades(v);
-                    },
-                  ),
-
+                  .toList(),
+              onChanged: (v) {
+                setState(() {
+                  _estadoSelecionado = v;
+                  _cidadeSelecionada = null;
+                });
+              },
+            ),
             const SizedBox(height: 15),
 
             // 🔽 Cidade
-            if (_loadingCidades)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (_estadoSelecionado != null)
+            if (_estadoSelecionado != null)
               DropdownButtonFormField<String>(
                 isExpanded: true,
                 value: _cidadeSelecionada,
                 decoration: _decoracaoCampo(),
                 hint: const Text('Selecione a cidade'),
-                items: _cidades
+                items: _estadosECidades[_estadoSelecionado]!
                     .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                     .toList(),
                 onChanged: (v) => setState(() => _cidadeSelecionada = v),
