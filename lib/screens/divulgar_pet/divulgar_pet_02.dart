@@ -78,7 +78,7 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
     });
     try {
       final url = Uri.parse(
-        'https://servicodados.ibge.gov.br/api/v1/localidades/estados/$uf/municipios',
+        'https://servicodados.ibge.gov.br/api/v1/localidades/estados/uf/municipios',
       );
       final response = await http.get(url);
 
@@ -130,15 +130,15 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
       );
       return;
     }
-    // if (_estadoSelecionado == null || _cidadeSelecionada == null) {
-    //    ScaffoldMessenger.of(context).showSnackBar(
-    //      const SnackBar(
-    //       content: Text('Selecione o estado e a cidade.'),
-    //       backgroundColor: Color(0xFFDC004E),
-    //      ),
-    //    );
-    //    return;
-    //  }
+    if (_estadoSelecionado == null || _cidadeSelecionada == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selecione o estado e a cidade.'),
+          backgroundColor: Color(0xFFDC004E),
+        ),
+      );
+      return;
+    }
     if (dataController.text.isNotEmpty &&
         !_validarData(dataController.text.trim())) {
       ScaffoldMessenger.of(context).showSnackBar(
