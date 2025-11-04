@@ -12,6 +12,7 @@ import 'widgets/success_screen.dart';
 // Divulgar Pet
 import 'screens/divulgar_pet/divulgar_pet_01.dart';
 import 'screens/divulgar_pet/divulgar_pet_02.dart';
+import 'screens/divulgar_pet/divulgar_pet_03.dart';
 
 // Adotar Pet
 import 'screens/adotar/adotar_home.dart';
@@ -44,6 +45,7 @@ class MyApp extends StatelessWidget {
         '/home': (context) => const HomeScreen(),
         '/divulgar1': (context) => const DivulgarPet01(),
         '/divulgar2': (context) => const DivulgarPet02(),
+        '/divulgar3': (context) => const DivulgarPet03(),
         '/adotar_home': (context) => const AdotarHome(),
         '/adotar_detalhes': (context) => const AdotarDetalhes(),
         '/adotar_interesse': (context) => const AdotarInteresse(),

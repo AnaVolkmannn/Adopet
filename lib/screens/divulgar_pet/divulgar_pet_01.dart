@@ -70,7 +70,6 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
         especieSelecionada == null ||
         generoSelecionado == null ||
         !idadeValida ||
-        corSelecionada == null ||
         porteSelecionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -260,19 +259,6 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
               ),
             ),
           ],
-        ),
-        const SizedBox(height: 20),
-
-        const Text('Cor predominante', style: _labelStyle),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          value: corSelecionada,
-          decoration: _decoracaoCampo(),
-          hint: const Text('Selecione a cor'),
-          items: cores
-              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-              .toList(),
-          onChanged: (v) => setState(() => corSelecionada = v),
         ),
         const SizedBox(height: 20),
       ],
