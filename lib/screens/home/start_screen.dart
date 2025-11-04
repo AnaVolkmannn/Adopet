@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../widgets/custom_button.dart';
+import '../../widgets/custom_button.dart';
 
 class StartScreen extends StatelessWidget {
   const StartScreen({super.key});

@@ -4,14 +4,14 @@ import 'package:image_picker/image_picker.dart';
 import '../../../widgets/anuncio_base_screen.dart';
 import '../../../widgets/custom_input.dart';
 
-class DivulgarPetStart extends StatefulWidget {
-  const DivulgarPetStart({super.key});
+class DivulgarPet01 extends StatefulWidget {
+  const DivulgarPet01({super.key});
 
   @override
-  State<DivulgarPetStart> createState() => _DivulgarPetStartState();
+  State<DivulgarPet01> createState() => _DivulgarPet01State();
 }
 
-class _DivulgarPetStartState extends State<DivulgarPetStart> {
+class _DivulgarPet01State extends State<DivulgarPet01> {
   final picker = ImagePicker();
 
   // Campos gerais
@@ -83,7 +83,7 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
       return;
     }
 
-    Navigator.pushNamed(context, '/perdido6');
+    Navigator.pushNamed(context, '/divulgar2');
   }
 
   @override

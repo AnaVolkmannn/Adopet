@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../core/theme.dart';
-import '../../widgets/custom_drawer.dart'; // 👈 importa o menu lateral
+import '../../../core/theme.dart';
+import '../../../widgets/custom_drawer.dart'; // 👈 importa o menu lateral
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -85,7 +85,7 @@ class HomeScreen extends StatelessWidget {
               icon: Icons.pets,
               gradient: const [Color(0xFFDC004E), Color(0xFFFF5C00)],
               textColor: Colors.white,
-              onTap: () => Navigator.pushNamed(context, '/divulgar'),
+              onTap: () => Navigator.pushNamed(context, '/divulgar1'),
             ),
 
             const SizedBox(height: 20),

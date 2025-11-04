@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../widgets/custom_button.dart';
+import 'custom_button.dart';
 import '../core/theme.dart';
 
 class SuccessScreen extends StatelessWidget {
@@ -17,12 +17,12 @@ class SuccessScreen extends StatelessWidget {
               const Icon(Icons.check_circle, size: 100, color: AppColors.primary),
               const SizedBox(height: 30),
               const Text(
-                'Anúncio salvo com sucesso!',
+                'Salvo com sucesso!',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 15),
               const Text(
-                'Seu pet agora está visível para toda a comunidade 🐾',
+                'Oque deseja fazer agora?',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 30),

@@ -6,13 +6,22 @@ class AdotarDetalhes extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pet =
-        ModalRoute.of(context)!.settings.arguments as Map<String, String>;
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+
+    // 🖼️ Suporte para múltiplas imagens
+    final List<String> imagens = pet['imagens'] != null
+        ? List<String>.from(pet['imagens']!)
+        : [pet['imagem'] ?? 'https://via.placeholder.com/400'];
+
+    // 🐶 Se o pet for marcado como "sem nome"
+    final nomePet =
+        (pet['sem_nome'] == true || pet['sem_nome'] == 'true') ? 'Sem nome' : (pet['nome'] ?? 'Sem nome');
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFF7E6),
       appBar: AppBar(
         title: Text(
-          pet['nome']!,
+          nomePet,
           style: const TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.bold,
@@ -41,20 +50,44 @@ class AdotarDetalhes extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // 📸 Imagem do pet
+              // 📸 Galeria de imagens
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  pet['imagem']!,
+                child: SizedBox(
                   height: 250,
-                  fit: BoxFit.cover,
+                  child: PageView.builder(
+                    itemCount: imagens.length,
+                    itemBuilder: (context, index) {
+                      return Image.network(
+                        imagens[index],
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.image_not_supported, size: 80),
+                      );
+                    },
+                  ),
                 ),
               ),
+
+              if (imagens.length > 1)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    '${imagens.length} fotos',
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 13,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+
               const SizedBox(height: 20),
 
               // 🐶 Nome do pet
               Text(
-                pet['nome']!,
+                nomePet,
                 style: const TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 22,
@@ -65,9 +98,9 @@ class AdotarDetalhes extends StatelessWidget {
 
               const SizedBox(height: 6),
 
-              // 🧬 Informações básicas
+              // 👶 Idade + Gênero
               Text(
-                '${pet['idade']} . ${pet['especie']} . SRD',
+                '${pet['idade'] ?? 'Idade não informada'} • ${pet['genero'] ?? 'Gênero não informado'}',
                 style: const TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 14,
@@ -77,11 +110,19 @@ class AdotarDetalhes extends StatelessWidget {
 
               const SizedBox(height: 25),
 
-              // 🗓️ Título seção
+              // 🔹 Informações gerais
+              _infoRow('Espécie', pet['especie'] ?? 'Não informada'),
+              _infoRow('Porte', pet['porte'] ?? 'Não informado'),
+              _infoRow('Tipo de anúncio', pet['tipo'] ?? 'Não informado'),
+              _infoRow('Localização', pet['localizacao'] ?? 'Não informada'),
+
+              const SizedBox(height: 25),
+
+              // 📝 Descrição
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Data e Local',
+                  'Descrição',
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontWeight: FontWeight.bold,
@@ -90,55 +131,24 @@ class AdotarDetalhes extends StatelessWidget {
                   ),
                 ),
               ),
-
-              const SizedBox(height: 6),
               const Divider(color: Color(0xFFDC004E), thickness: 1),
-              const SizedBox(height: 6),
-
-              // 📍 Informações do local
-              const Align(
+              const SizedBox(height: 8),
+              Align(
                 alignment: Alignment.centerLeft,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Cidade',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFDC004E),
-                      ),
-                    ),
-                    Text(
-                      'Jaraguá do Sul',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      'Ponto de Referência',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFDC004E),
-                      ),
-                    ),
-                    Text(
-                      'Escola Gustavo Tank',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  pet['descricao'] ?? 'Sem descrição disponível.',
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    color: Colors.black87,
+                    height: 1.4,
+                  ),
                 ),
               ),
 
               const SizedBox(height: 30),
 
-              // ❤️ Botão
+              // ❤️ Botão de adoção
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFDC004E),
@@ -170,6 +180,38 @@ class AdotarDetalhes extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // 🔹 Widget auxiliar pra mostrar rótulo + valor
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 150,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFDC004E),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

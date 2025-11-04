@@ -71,7 +71,7 @@ class AdotarInteresse extends StatelessWidget {
                 elevation: 2,
               ),
               onPressed: () {
-                Navigator.pushNamed(context, '/adotar_success');
+                Navigator.pushNamed(context, '/success');
               },
               child: const Text(
                 'Enviar Solicitação',

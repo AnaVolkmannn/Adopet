@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/theme.dart';
+import '../../../core/theme.dart';
 
 class MeusAnunciosScreen extends StatelessWidget {
   const MeusAnunciosScreen({super.key});
@@ -46,7 +46,7 @@ class MeusAnunciosScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(15),
                 boxShadow: const [
                   BoxShadow(
-                    color: Color(0xFFFFB6C1), // 💖 sombra rosa suave
+                    color: Color(0xFFFFB6C1),
                     blurRadius: 10,
                     offset: Offset(0, 4),
                   ),
@@ -55,16 +55,6 @@ class MeusAnunciosScreen extends StatelessWidget {
               child: Column(
                 children: [
                   const SizedBox(height: 12),
-                  Text(
-                    'Meus Anúncios',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(16),
                     child: Image.asset(
@@ -99,7 +89,13 @@ class MeusAnunciosScreen extends StatelessWidget {
                     children: [
                       TextButton(
                         onPressed: () {
-                          // TODO: lógica de exclusão
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content:
+                                  Text('Excluído com sucesso.'),
+                              backgroundColor: Color(0xFFDC004E),
+                            ),
+                          );
                         },
                         child: const Text(
                           'Excluir',
@@ -112,7 +108,8 @@ class MeusAnunciosScreen extends StatelessWidget {
                       ),
                       TextButton(
                         onPressed: () {
-                          // TODO: lógica de edição
+                          // 🔹 Agora só navega sem parâmetros
+                          Navigator.pushNamed(context, '/divulgar1');
                         },
                         child: const Text(
                           'Editar',

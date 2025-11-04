@@ -1,17 +1,17 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import '../../../widgets/anuncio_base_screen.dart';
-import '../../../widgets/custom_input.dart';
+import '../../widgets/anuncio_base_screen.dart';
+import '../../widgets/custom_input.dart';
 
-class CriarAnuncioPerdido06 extends StatefulWidget {
-  const CriarAnuncioPerdido06({super.key});
+class DivulgarPet02 extends StatefulWidget {
+  const DivulgarPet02({super.key});
 
   @override
-  State<CriarAnuncioPerdido06> createState() => _CriarAnuncioPerdido06State();
+  State<DivulgarPet02> createState() => _DivulgarPet02State();
 }
 
-class _CriarAnuncioPerdido06State extends State<CriarAnuncioPerdido06> {
+class _DivulgarPet02State extends State<DivulgarPet02> {
   bool _declaracaoAceita = false;
   bool _temIdentificacao = false;
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/theme.dart'; // usa suas cores
+import '../../../core/theme.dart'; // usa suas cores
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

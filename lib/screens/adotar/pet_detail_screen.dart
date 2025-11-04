@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../widgets/custom_button.dart';
+import '../../widgets/custom_button.dart';
 
 class PetDetailScreen extends StatelessWidget {
   const PetDetailScreen({super.key});
