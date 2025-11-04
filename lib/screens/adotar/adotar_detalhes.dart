@@ -67,7 +67,7 @@ class AdotarDetalhes extends StatelessWidget {
 
               // 🧬 Informações básicas
               Text(
-                '${pet['idade']} . ${pet['especie']} . Sem Raça',
+                '${pet['idade']} . ${pet['especie']} . SRD',
                 style: const TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 14,
@@ -92,10 +92,7 @@ class AdotarDetalhes extends StatelessWidget {
               ),
 
               const SizedBox(height: 6),
-              const Divider(
-                color: Color(0xFFDC004E),
-                thickness: 1,
-              ),
+              const Divider(color: Color(0xFFDC004E), thickness: 1),
               const SizedBox(height: 6),
 
               // 📍 Informações do local

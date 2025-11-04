@@ -20,7 +20,8 @@ class HomeScreen extends StatelessWidget {
             children: [
               Image.asset(
                 'assets/images/logo.png',
-                height: 45,
+                height:
+                    110, // 🔹 logo bem maior sem aumentar a altura do AppBar
                 fit: BoxFit.contain,
               ),
             ],
@@ -29,7 +30,7 @@ class HomeScreen extends StatelessWidget {
         actions: [
           Builder(
             builder: (context) => IconButton(
-              icon: const Icon(Icons.menu, color: Color(0xFFDC004E), size: 28),
+              icon: const Icon(Icons.menu, color: Color(0xFFDC004E), size: 32),
               onPressed: () => Scaffold.of(context).openEndDrawer(),
             ),
           ),

@@ -61,7 +61,8 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
 
   // 🚀 Validação
   void _prosseguir() {
-    bool idadeValida = idadeAnosController.text.isNotEmpty ||
+    bool idadeValida =
+        idadeAnosController.text.isNotEmpty ||
         idadeMesesController.text.isNotEmpty;
 
     // ⚠️ Agora não exige fotos
@@ -89,15 +90,13 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
   Widget build(BuildContext context) {
     return AnuncioBaseScreen(
       title: 'Criar Anúncio',
-      subtitle: 'Divulgue um pet ou uma ninhada para adoção responsável',
+      subtitle: 'Divulgue um pet seu ou um pet perdido para adoção responsável',
       onBack: () => Navigator.pop(context),
       onNext: _prosseguir,
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildPetUnico(),
-          ],
+          children: [_buildPetUnico()],
         ),
       ),
     );
@@ -231,10 +230,7 @@ class _DivulgarPetStartState extends State<DivulgarPetStart> {
                   ),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
-                  Icons.add_a_photo,
-                  color: Color(0xFFDC004E),
-                ),
+                child: const Icon(Icons.add_a_photo, color: Color(0xFFDC004E)),
               ),
             ),
           ],

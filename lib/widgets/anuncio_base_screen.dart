@@ -42,7 +42,10 @@ class AnuncioBaseScreen extends StatelessWidget {
                 children: [
                   // 🔙 Botão de voltar
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Color(0xFFDC004E)),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: Color(0xFFDC004E),
+                    ),
                     onPressed: onBack,
                   ),
 
@@ -74,14 +77,6 @@ class AnuncioBaseScreen extends StatelessWidget {
                           ),
                         ),
                       ],
-                    ),
-                  ),
-
-                  // ☰ Botão de menu funcional (abre o Drawer)
-                  Builder(
-                    builder: (context) => IconButton(
-                      icon: const Icon(Icons.menu, color: Color(0xFFDC004E)),
-                      onPressed: () => Scaffold.of(context).openEndDrawer(),
                     ),
                   ),
                 ],

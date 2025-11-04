@@ -17,26 +17,28 @@ class CustomDrawer extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cabeçalho do usuário
+            // 🔹 Cabeçalho do usuário
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: const BoxDecoration(
                 color: Color(0xFFDC004E),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                ),
+                borderRadius: BorderRadius.only(topLeft: Radius.circular(20)),
               ),
               child: const Row(
                 children: [
                   CircleAvatar(
                     radius: 26,
                     backgroundColor: Colors.white,
-                    child: Icon(Icons.person, color: Color(0xFFDC004E), size: 30),
+                    child: Icon(
+                      Icons.person,
+                      color: Color(0xFFDC004E),
+                      size: 30,
+                    ),
                   ),
                   SizedBox(width: 15),
                   Text(
-                    'Olá, Ana!',
+                    'Olá!',
                     style: TextStyle(
                       color: Colors.white,
                       fontFamily: 'Poppins',
@@ -50,6 +52,7 @@ class CustomDrawer extends StatelessWidget {
 
             const SizedBox(height: 20),
 
+            // 🔹 Menu principal
             _buildMenuItem(
               context,
               icon: Icons.campaign,
@@ -57,21 +60,25 @@ class CustomDrawer extends StatelessWidget {
               onTap: () => Navigator.pushNamed(context, '/meus_anuncios'),
             ),
 
+            const Spacer(),
+
+            // 🔹 Botão Sair fixado na parte inferior
             const Divider(
               thickness: 1,
               color: Color(0xFFDC004E),
               indent: 16,
               endIndent: 16,
             ),
-
             _buildMenuItem(
               context,
               icon: Icons.logout,
               label: 'Sair',
-              onTap: () => Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false),
+              onTap: () => Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/login',
+                (route) => false,
+              ),
             ),
-
-            const Spacer(),
 
             const Padding(
               padding: EdgeInsets.all(16.0),
