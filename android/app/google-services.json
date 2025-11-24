@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "145036418788",
+    "project_id": "adopet-b8bf1",
+    "storage_bucket": "adopet-b8bf1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:145036418788:android:f2531318b6c588ba0556f1",
+        "android_client_info": {
+          "package_name": "com.example.adopet"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpgcJTvl2iJBV_d6iILz0_t9Y63tMWwtY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
