@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // <--- Import Firebase Auth
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/theme.dart';
 import '../../../core/spacing.dart';
 
-// Change LoginScreen to a StatefulWidget to manage state
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -12,11 +11,14 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // 1. Create TextEditingControllers for email and password
+  // Controllers
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  bool _isLoading = false; // To show loading state
-  String? _errorMessage; // To display error messages
+
+  // Estados
+  bool _isLoading = false;
+  String? _errorMessage;
+  bool _obscurePassword = true; // 👈 controla ver/desver senha
 
   @override
   void dispose() {
@@ -25,27 +27,23 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // Function to handle the login attempt
+  // Login
   Future<void> _handleLogin() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null; // Clear previous errors
+      _errorMessage = null;
     });
 
     try {
-      // 2. Call Firebase Authentication to sign in
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(), // trim() to remove leading/trailing spaces
+        email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      // If successful, navigate to home. Firebase AuthStateChanges will handle this.
-      // We'll rely on the StreamBuilder in main.dart or a wrapper for navigation.
-      // For now, let's just push and replace to home.
-      if (mounted) { // Check if the widget is still in the tree
+
+      if (mounted) {
         Navigator.pushReplacementNamed(context, '/home');
       }
     } on FirebaseAuthException catch (e) {
-      // 3. Handle Firebase-specific errors
       String message;
       if (e.code == 'user-not-found') {
         message = 'Nenhum usuário encontrado com este e-mail.';
@@ -60,18 +58,95 @@ class _LoginScreenState extends State<LoginScreen> {
         _errorMessage = message;
       });
     } catch (e) {
-      // 4. Handle other potential errors
       setState(() {
         _errorMessage = 'Ocorreu um erro inesperado. Tente novamente.';
       });
-      print(e); // Log the full error for debugging
+      print(e);
     } finally {
       setState(() {
-        _isLoading = false; // Stop loading regardless of success or failure
+        _isLoading = false;
       });
     }
   }
 
+  // Esqueceu a senha
+  Future<void> _showForgotPasswordDialog(BuildContext context) async {
+    String? emailAddress = await showDialog<String>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        TextEditingController emailController =
+            TextEditingController(text: _emailController.text.trim());
+
+        return AlertDialog(
+          title: const Text('Redefinir Senha'),
+          content: TextField(
+            controller: emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              hintText: 'Digite seu e-mail',
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancelar'),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Enviar'),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(emailController.text.trim());
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    if (emailAddress != null && emailAddress.isNotEmpty) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
+      try {
+        await FirebaseAuth.instance.sendPasswordResetEmail(
+          email: emailAddress,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  Text('E-mail de redefinição enviado para $emailAddress'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } on FirebaseAuthException catch (e) {
+        String message;
+        if (e.code == 'invalid-email') {
+          message = 'O formato do e-mail é inválido.';
+        } else if (e.code == 'user-not-found') {
+          message = 'E-mail não encontrado. Verifique e tente novamente.';
+        } else {
+          message = 'Erro ao enviar e-mail de redefinição: ${e.message}';
+        }
+        setState(() {
+          _errorMessage = message;
+        });
+      } catch (e) {
+        setState(() {
+          _errorMessage = 'Ocorreu um erro inesperado ao enviar o e-mail.';
+        });
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,8 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 20),
 
-                // 🩷 Título
-                const Text( // Made const if not using dynamic text
+                const Text(
                   'Seja Bem Vindo!',
                   style: TextStyle(
                     fontFamily: 'Inter',
@@ -106,8 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 4),
 
-                // 🧡 Subtítulo
-                const Text( // Made const
+                const Text(
                   'Faça login com sua conta',
                   style: TextStyle(
                     color: Color(0xFFFF5C00),
@@ -119,38 +192,45 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 40),
 
                 // 📧 Campo e-mail
-                _StyledInput( // Pass controller to _StyledInput
+                _StyledInput(
                   label: 'E-mail',
                   hint: 'Digite seu e-mail',
                   controller: _emailController,
-                  keyboardType: TextInputType.emailAddress, // Added for better UX
+                  keyboardType: TextInputType.emailAddress,
+                  // não passa obscure -> usa false por padrão
                 ),
 
                 const SizedBox(height: 20),
 
-                // 🔒 Campo senha
-                _StyledInput( // Pass controller to _StyledInput
+                // 🔒 Campo senha com ver/desver
+                _StyledInput(
                   label: 'Senha',
                   hint: 'Digite sua senha',
-                  obscure: true,
                   controller: _passwordController,
-                  textInputAction: TextInputAction.done, // Better for last input
+                  obscure: _obscurePassword,
+                  isPassword: true,
+                  onToggleVisibility: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
+                  textInputAction: TextInputAction.done,
                 ),
 
-                // Display error message if any
                 if (_errorMessage != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 15),
                     child: Text(
                       _errorMessage!,
-                      style: const TextStyle(color: Colors.red, fontSize: 14),
+                      style:
+                          const TextStyle(color: Colors.red, fontSize: 14),
                       textAlign: TextAlign.center,
                     ),
                   ),
 
                 const SizedBox(height: 40),
 
-                // 🔘 Botão LOGIN com gradiente refinado
+                // 🔘 Botão LOGIN
                 Container(
                   width: 225,
                   height: 45,
@@ -171,13 +251,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                   child: TextButton(
-                    onPressed: _isLoading ? null : _handleLogin, // Disable button while loading
+                    onPressed: _isLoading ? null : _handleLogin,
                     style: TextButton.styleFrom(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
-                    child: _isLoading // Show loading indicator or text
+                    child: _isLoading
                         ? const SizedBox(
                             width: 24,
                             height: 24,
@@ -200,7 +280,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 15),
 
-                // 🔗 Link “Criar conta”
+                // Esqueceu senha
+                GestureDetector(
+                  onTap: _isLoading
+                      ? null
+                      : () => _showForgotPasswordDialog(context),
+                  child: const Text(
+                    'Esqueceu a senha?',
+                    style: TextStyle(
+                      color: Color(0xFFFF5C00),
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 15),
+
+                // Criar conta
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -233,23 +330,31 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// 🔹 Input personalizado com sombra mais fiel ao Figma
+// ------------------------------------------------------------
+// 🔹 Widget de input com suporte a senha (ver/desver)
+// ------------------------------------------------------------
+
 class _StyledInput extends StatelessWidget {
   final String label;
   final String hint;
-  final bool obscure;
-  final TextEditingController? controller; // <--- Add controller parameter
-  final TextInputType keyboardType; // <--- Add keyboardType
-  final TextInputAction textInputAction; // <--- Add textInputAction
+  final bool obscure; // 👈 nunca será nulo, tem default no construtor
+  final TextEditingController? controller;
+  final TextInputType keyboardType;
+  final TextInputAction textInputAction;
+
+  final bool isPassword; // 👈 idem, nunca nulo
+  final VoidCallback? onToggleVisibility;
 
   const _StyledInput({
     required this.label,
     required this.hint,
-    this.obscure = false,
-    this.controller, // Initialize controller
-    this.keyboardType = TextInputType.text, // Default
-    this.textInputAction = TextInputAction.next, // Default
-    super.key, // Add key
+    this.obscure = false,                    // 👈 default garante que não vem null
+    this.controller,
+    this.keyboardType = TextInputType.text,
+    this.textInputAction = TextInputAction.next,
+    this.isPassword = false,                 // 👈 default também
+    this.onToggleVisibility,
+    super.key,
   });
 
   @override
@@ -277,10 +382,10 @@ class _StyledInput extends StatelessWidget {
             ],
           ),
           child: TextField(
-            controller: controller, // <--- Assign the controller
-            obscureText: obscure,
-            keyboardType: keyboardType, // Use keyboardType
-            textInputAction: textInputAction, // Use textInputAction
+            controller: controller,
+            obscureText: obscure,              // 👈 sempre bool (true/false)
+            keyboardType: keyboardType,
+            textInputAction: textInputAction,
             decoration: InputDecoration(
               filled: true,
               fillColor: const Color(0xFFFFE6EC),
@@ -297,6 +402,15 @@ class _StyledInput extends StatelessWidget {
                 horizontal: 16,
                 vertical: 14,
               ),
+              suffixIcon: isPassword
+                  ? IconButton(
+                      icon: Icon(
+                        obscure ? Icons.visibility_off : Icons.visibility,
+                        color: const Color(0xFFFF5C00),
+                      ),
+                      onPressed: onToggleVisibility,
+                    )
+                  : null,
             ),
           ),
         ),
