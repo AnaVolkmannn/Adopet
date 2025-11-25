@@ -17,6 +17,9 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
   final TextEditingController descricaoController = TextEditingController();
   final TextEditingController dataController = TextEditingController();
 
+  // Dados vindos da tela 1
+  Map<String, dynamic>? _petData;
+
   // 🗺️ Lista local de estados e cidades
   final Map<String, List<String>> _estadosECidades = {
     'SC': ['Florianópolis', 'Joinville', 'Blumenau', 'Criciúma', 'Chapecó'],
@@ -27,7 +30,29 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
     'MG': ['Belo Horizonte', 'Uberlândia', 'Juiz de Fora', 'Montes Claros'],
   };
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Pega os argumentos enviados pela Tela 1
+    if (_petData == null) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map<String, dynamic>) {
+        _petData = Map<String, dynamic>.from(args);
+      }
+    }
+  }
+
   void _proximoPasso() {
+    if (_petData == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ocorreu um erro ao carregar os dados do pet. Volte e tente novamente.'),
+          backgroundColor: Color(0xFFDC004E),
+        ),
+      );
+      return;
+    }
+
     if (_tipoSituacao == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -47,7 +72,24 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
       return;
     }
 
-    Navigator.pushNamed(context, '/divulgar3');
+    // Monta o mapa com os dados da tela 2
+    final Map<String, dynamic> updatedPetData = {
+      ..._petData!, // todos os dados da tela 1
+      'adType': _tipoSituacao, // "Doacao" ou "Achado"
+      'state': _estadoSelecionado,
+      'city': _cidadeSelecionada,
+      'description': descricaoController.text.trim(),
+      'foundDate': dataController.text.trim().isEmpty
+          ? null
+          : dataController.text.trim(), // por enquanto String; dá pra converter depois
+    };
+
+    // Envia para a tela 3
+    Navigator.pushNamed(
+      context,
+      '/divulgar3',
+      arguments: updatedPetData,
+    );
   }
 
   @override

@@ -1,42 +1,125 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../widgets/custom_drawer.dart';
 
-class AdotarInteresse extends StatelessWidget {
+class AdotarInteresse extends StatefulWidget {
   const AdotarInteresse({super.key});
+
+  @override
+  State<AdotarInteresse> createState() => _AdotarInteresseState();
+}
+
+class _AdotarInteresseState extends State<AdotarInteresse> {
+  final TextEditingController _nomeController = TextEditingController();
+  final TextEditingController _telefoneController = TextEditingController();
+  final TextEditingController _mensagemController = TextEditingController();
+
+  bool _isSending = false;
+
+  @override
+  void dispose() {
+    _nomeController.dispose();
+    _telefoneController.dispose();
+    _mensagemController.dispose();
+    super.dispose();
+  }
+
+  InputDecoration _customInput(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(
+        fontFamily: 'Poppins',
+        color: Color(0xFFDC004E),
+        fontWeight: FontWeight.w600,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFDC004E), width: 2),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFDC004E), width: 1),
+      ),
+      filled: true,
+      fillColor: const Color(0xFFFFF7E6),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    );
+  }
+
+  Future<void> _enviarSolicitacao(BuildContext context) async {
+    if (_isSending) return;
+
+    final pet =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+
+    final nome = _nomeController.text.trim();
+    final telefone = _telefoneController.text.trim();
+    final mensagem = _mensagemController.text.trim();
+
+    if (nome.isEmpty || telefone.isEmpty || mensagem.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Preencha nome, telefone e mensagem.'),
+          backgroundColor: Color(0xFFDC004E),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSending = true);
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+
+      await FirebaseFirestore.instance
+          .collection('adoption_interests')
+          .add({
+        'petId': pet['id'],                 // veio do AdotarHome
+        'petName': pet['nome'],
+        'tutorId': pet['tutorId'],          // se você passar isso depois no args
+        'interestedUserId': user?.uid,
+        'interestedName': nome,
+        'interestedPhone': telefone,
+        'message': mensagem,
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Solicitação enviada ao tutor!'),
+          backgroundColor: Color(0xFFDC004E),
+        ),
+      );
+
+      Navigator.pop(context); // volta pra tela de detalhes
+
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao enviar solicitação: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final pet =
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
 
-    InputDecoration customInput(String label) {
-      return InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(
-          fontFamily: 'Poppins',
-          color: Color(0xFFDC004E),
-          fontWeight: FontWeight.w600,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFDC004E), width: 2),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFDC004E), width: 1),
-        ),
-        filled: true,
-        fillColor: const Color(0xFFFFF7E6),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      );
-    }
-
     return Scaffold(
       backgroundColor: const Color(0xFFFFF7E6),
-
-      // 🔹 Drawer customizado (chamado manualmente)
-      // endDrawer: const CustomDrawer(), ❌ não usamos assim
 
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(115),
@@ -139,10 +222,14 @@ class AdotarInteresse extends StatelessWidget {
                 const Divider(color: Color(0xFFDC004E)),
 
                 const SizedBox(height: 16),
-                TextField(decoration: customInput('Seu nome completo')),
+                TextField(
+                  controller: _nomeController,
+                  decoration: _customInput('Seu nome completo'),
+                ),
                 const SizedBox(height: 16),
                 TextField(
-                  decoration: customInput('Telefone para contato'),
+                  controller: _telefoneController,
+                  decoration: _customInput('Telefone para contato'),
                   keyboardType: TextInputType.phone,
                 ),
                 const SizedBox(height: 50),
@@ -161,9 +248,10 @@ class AdotarInteresse extends StatelessWidget {
 
                 const SizedBox(height: 16),
                 TextField(
+                  controller: _mensagemController,
                   maxLines: 4,
                   decoration:
-                      customInput('Por que você quer adotar esse pet?'),
+                      _customInput('Por que você quer adotar esse pet?'),
                 ),
 
                 const SizedBox(height: 32),
@@ -181,18 +269,27 @@ class AdotarInteresse extends StatelessWidget {
                     ),
                     elevation: 2,
                   ),
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/success');
-                  },
-                  child: const Text(
-                    'Enviar Solicitação',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  onPressed: _isSending
+                      ? null
+                      : () => _enviarSolicitacao(context),
+                  child: _isSending
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Enviar Solicitação',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ],
             ),
