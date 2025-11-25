@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // <--- Import Firebase Auth
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/theme.dart';
 import '../../../core/spacing.dart';
 
-// Change SignupScreen to a StatefulWidget to manage state
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -12,46 +11,56 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
-  // 1. Create TextEditingControllers for name, email, and password
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  bool _isLoading = false; // To show loading state
-  String? _errorMessage; // To display error messages
+  final TextEditingController _confirmPasswordController = TextEditingController();
+
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  // Function to handle the sign-up attempt
   Future<void> _handleSignup() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null; // Clear previous errors
+      _errorMessage = null;
     });
 
+    // 🔎 Validação básica de senha
+    if (_passwordController.text != _confirmPasswordController.text) {
+      setState(() {
+        _errorMessage = "As senhas não coincidem.";
+        _isLoading = false;
+      });
+      return;
+    }
+
     try {
-      // 2. Call Firebase Authentication to create a new user
-      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
-      // Optional: Update the user's display name immediately after creation
-      await userCredential.user?.updateDisplayName(_nameController.text.trim());
+      await userCredential.user?.updateDisplayName(
+        _nameController.text.trim(),
+      );
 
-      // If successful, navigate to home. Firebase AuthStateChanges will handle this
-      // or you can explicitly navigate.
-      if (mounted) { // Check if the widget is still in the tree
-        Navigator.pushReplacementNamed(context, '/home'); // Or to a success screen
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/home');
       }
-
     } on FirebaseAuthException catch (e) {
-      // 3. Handle Firebase-specific errors during registration
       String message;
       if (e.code == 'weak-password') {
         message = 'A senha é muito fraca.';
@@ -62,18 +71,18 @@ class _SignupScreenState extends State<SignupScreen> {
       } else {
         message = 'Erro ao criar conta. Verifique os dados.';
       }
+
       setState(() {
         _errorMessage = message;
       });
     } catch (e) {
-      // 4. Handle other potential errors
       setState(() {
         _errorMessage = 'Ocorreu um erro inesperado. Tente novamente.';
       });
-      print(e); // Log the full error for debugging
+      print(e);
     } finally {
       setState(() {
-        _isLoading = false; // Stop loading regardless of success or failure
+        _isLoading = false;
       });
     }
   }
@@ -98,8 +107,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
                 const SizedBox(height: 10),
 
-                // 🩷 Título
-                const Text( // Made const if not using dynamic text
+                const Text(
                   'Cadastrar',
                   style: TextStyle(
                     fontFamily: 'Inter',
@@ -111,8 +119,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
                 const SizedBox(height: 4),
 
-                // 🧡 Subtítulo
-                const Text( // Made const
+                const Text(
                   'Criar uma nova conta',
                   style: TextStyle(
                     color: Color(0xFFFF5C00),
@@ -123,8 +130,8 @@ class _SignupScreenState extends State<SignupScreen> {
 
                 const SizedBox(height: 40),
 
-                // 👤 Campo nome
-                _StyledInput( // Pass controller to _StyledInput
+                // 👤 Nome
+                _StyledInput(
                   label: 'Nome de usuário',
                   hint: 'Digite o nome de usuário',
                   controller: _nameController,
@@ -133,8 +140,8 @@ class _SignupScreenState extends State<SignupScreen> {
 
                 const SizedBox(height: 20),
 
-                // 📧 Campo e-mail
-                _StyledInput( // Pass controller to _StyledInput
+                // 📧 E-mail
+                _StyledInput(
                   label: 'E-mail',
                   hint: 'Digite seu e-mail',
                   controller: _emailController,
@@ -143,16 +150,37 @@ class _SignupScreenState extends State<SignupScreen> {
 
                 const SizedBox(height: 20),
 
-                // 🔒 Campo senha
-                _StyledInput( // Pass controller to _StyledInput
+                // 🔒 Senha
+                _StyledInput(
                   label: 'Senha',
                   hint: 'Digite sua senha',
-                  obscure: true,
                   controller: _passwordController,
-                  textInputAction: TextInputAction.done, // Last input before button
+                  obscure: _obscurePassword,
+                  isPassword: true,
+                  onToggleVisibility: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
                 ),
 
-                // Display error message if any
+                const SizedBox(height: 20),
+
+                // 🔒 Confirmar senha
+                _StyledInput(
+                  label: 'Confirme a senha',
+                  hint: 'Repita sua senha',
+                  controller: _confirmPasswordController,
+                  obscure: _obscureConfirmPassword,
+                  isPassword: true,
+                  onToggleVisibility: () {
+                    setState(() {
+                      _obscureConfirmPassword = !_obscureConfirmPassword;
+                    });
+                  },
+                  textInputAction: TextInputAction.done,
+                ),
+
                 if (_errorMessage != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 15),
@@ -165,7 +193,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
                 const SizedBox(height: 40),
 
-                // 🔘 Botão CRIAR CONTA com gradiente refinado
+                // 🔘 Botão CRIAR CONTA
                 Container(
                   width: 225,
                   height: 45,
@@ -186,13 +214,13 @@ class _SignupScreenState extends State<SignupScreen> {
                     ],
                   ),
                   child: TextButton(
-                    onPressed: _isLoading ? null : _handleSignup, // Disable button while loading
+                    onPressed: _isLoading ? null : _handleSignup,
                     style: TextButton.styleFrom(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
-                    child: _isLoading // Show loading indicator or text
+                    child: _isLoading
                         ? const SizedBox(
                             width: 24,
                             height: 24,
@@ -215,7 +243,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
                 const SizedBox(height: 15),
 
-                // 🔗 Link “Já tem uma conta? Logar”
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -248,24 +275,29 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 }
 
-// 🔹 Input com sombra e estética igual à tela de login
-// Ensure _StyledInput is updated to accept a controller, keyboardType, and textInputAction
+// ------------------------------------------------------------
+// 🔹 Input reutilizável (com olhinho opcional)
+// ------------------------------------------------------------
 class _StyledInput extends StatelessWidget {
   final String label;
   final String hint;
-  final bool obscure;
-  final TextEditingController? controller; // <--- Add controller parameter
-  final TextInputType keyboardType; // <--- Add keyboardType
-  final TextInputAction textInputAction; // <--- Add textInputAction
+  final bool obscure;             // nunca nulo
+  final bool isPassword;          // nunca nulo
+  final TextEditingController? controller;
+  final TextInputType keyboardType;
+  final TextInputAction textInputAction;
+  final VoidCallback? onToggleVisibility;
 
   const _StyledInput({
     required this.label,
     required this.hint,
-    this.obscure = false,
-    this.controller, // Initialize controller
-    this.keyboardType = TextInputType.text, // Default
-    this.textInputAction = TextInputAction.next, // Default
-    super.key, // Add key
+    this.obscure = false,                       // default garante bool
+    this.isPassword = false,                    // default garante bool
+    this.controller,
+    this.keyboardType = TextInputType.text,
+    this.textInputAction = TextInputAction.next,
+    this.onToggleVisibility,
+    super.key,
   });
 
   @override
@@ -288,15 +320,15 @@ class _StyledInput extends StatelessWidget {
                 color: const Color(0xFFDC004E).withOpacity(0.2),
                 offset: const Offset(0, 6),
                 blurRadius: 12,
-                spreadRadius: 0, // Changed spreadRadius to 0 for consistency
+                spreadRadius: 0,
               ),
             ],
           ),
           child: TextField(
-            controller: controller, // <--- Assign the controller
-            obscureText: obscure,
-            keyboardType: keyboardType, // Use keyboardType
-            textInputAction: textInputAction, // Use textInputAction
+            controller: controller,
+            obscureText: obscure,                // 👈 aqui NUNCA é null
+            keyboardType: keyboardType,
+            textInputAction: textInputAction,
             decoration: InputDecoration(
               filled: true,
               fillColor: const Color(0xFFFFE6EC),
@@ -313,6 +345,15 @@ class _StyledInput extends StatelessWidget {
                 horizontal: 16,
                 vertical: 14,
               ),
+              suffixIcon: isPassword
+                  ? IconButton(
+                      icon: Icon(
+                        obscure ? Icons.visibility_off : Icons.visibility,
+                        color: const Color(0xFFFF5C00),
+                      ),
+                      onPressed: onToggleVisibility,
+                    )
+                  : null,
             ),
           ),
         ),
