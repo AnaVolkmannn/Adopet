@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart'; // Import Firebase Core package
+import 'firebase_options.dart'; // Import the generated Firebase options file
+
 import 'core/theme.dart';
 
 // Telas principais
@@ -22,7 +25,19 @@ import 'screens/adotar/adotar_interesse.dart';
 // Meus Anúncios
 import 'screens/meus_anuncios/meus_anuncios_screen.dart';
 
-void main() {
+// Your main function is now asynchronous to allow for Firebase initialization
+void main() async {
+  // Ensure that Flutter's widget binding is initialized.
+  // This is crucial before using platform channels or any Flutter plugin.
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase with the default options for the current platform.
+  // This uses the configuration generated in 'firebase_options.dart'.
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Once Firebase is initialized, run your Flutter application.
   runApp(const MyApp());
 }
 

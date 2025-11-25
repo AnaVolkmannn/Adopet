@@ -83,4 +83,5 @@ class DefaultFirebaseOptions {
     authDomain: 'adopet-b8bf1.firebaseapp.com',
     storageBucket: 'adopet-b8bf1.firebasestorage.app',
   );
+
 }
