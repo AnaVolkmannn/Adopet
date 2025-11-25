@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 Firestore
 import '../../../core/theme.dart';
 import '../../../core/spacing.dart';
 
@@ -14,7 +15,8 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -37,7 +39,7 @@ class _SignupScreenState extends State<SignupScreen> {
       _errorMessage = null;
     });
 
-    // 🔎 Validação básica de senha
+    // 🔎 Validação local: senhas iguais
     if (_passwordController.text != _confirmPasswordController.text) {
       setState(() {
         _errorMessage = "As senhas não coincidem.";
@@ -47,16 +49,38 @@ class _SignupScreenState extends State<SignupScreen> {
     }
 
     try {
+      // 1️⃣ Cria o usuário no Firebase Auth
       final userCredential =
           await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
-      await userCredential.user?.updateDisplayName(
-        _nameController.text.trim(),
-      );
+      final user = userCredential.user;
+      if (user == null) {
+        throw Exception('Usuário nulo após criação.');
+      }
 
+      // Atualiza o displayName no Auth (opcional mas legal)
+      await user.updateDisplayName(_nameController.text.trim());
+
+      // 2️⃣ Cria o documento na coleção "users" no Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid) // ID do documento = UID do Auth
+          .set({
+        'uid': user.uid,
+        'name': _nameController.text.trim(),
+        'email': user.email,
+        'favorites': <String>[],
+        'myPets': <String>[],
+        'role': 'user',
+        'createdAt': FieldValue
+            .serverTimestamp(), // timestamp gerado pelo servidor
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // 3️⃣ Navega pra home
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/home');
       }
@@ -79,7 +103,7 @@ class _SignupScreenState extends State<SignupScreen> {
       setState(() {
         _errorMessage = 'Ocorreu um erro inesperado. Tente novamente.';
       });
-      print(e);
+      print('Erro no signup: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -98,7 +122,6 @@ class _SignupScreenState extends State<SignupScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // 🐾 Logo
                 Image.asset(
                   'assets/images/logov3.png',
                   width: 250,
@@ -130,7 +153,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
                 const SizedBox(height: 40),
 
-                // 👤 Nome
                 _StyledInput(
                   label: 'Nome de usuário',
                   hint: 'Digite o nome de usuário',
@@ -140,7 +162,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
                 const SizedBox(height: 20),
 
-                // 📧 E-mail
                 _StyledInput(
                   label: 'E-mail',
                   hint: 'Digite seu e-mail',
@@ -150,7 +171,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
                 const SizedBox(height: 20),
 
-                // 🔒 Senha
                 _StyledInput(
                   label: 'Senha',
                   hint: 'Digite sua senha',
@@ -166,7 +186,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
                 const SizedBox(height: 20),
 
-                // 🔒 Confirmar senha
                 _StyledInput(
                   label: 'Confirme a senha',
                   hint: 'Repita sua senha',
@@ -193,7 +212,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
                 const SizedBox(height: 40),
 
-                // 🔘 Botão CRIAR CONTA
                 Container(
                   width: 225,
                   height: 45,
@@ -281,8 +299,8 @@ class _SignupScreenState extends State<SignupScreen> {
 class _StyledInput extends StatelessWidget {
   final String label;
   final String hint;
-  final bool obscure;             // nunca nulo
-  final bool isPassword;          // nunca nulo
+  final bool obscure;
+  final bool isPassword;
   final TextEditingController? controller;
   final TextInputType keyboardType;
   final TextInputAction textInputAction;
@@ -291,8 +309,8 @@ class _StyledInput extends StatelessWidget {
   const _StyledInput({
     required this.label,
     required this.hint,
-    this.obscure = false,                       // default garante bool
-    this.isPassword = false,                    // default garante bool
+    this.obscure = false,
+    this.isPassword = false,
     this.controller,
     this.keyboardType = TextInputType.text,
     this.textInputAction = TextInputAction.next,
@@ -326,7 +344,7 @@ class _StyledInput extends StatelessWidget {
           ),
           child: TextField(
             controller: controller,
-            obscureText: obscure,                // 👈 aqui NUNCA é null
+            obscureText: obscure,
             keyboardType: keyboardType,
             textInputAction: textInputAction,
             decoration: InputDecoration(
@@ -341,10 +359,8 @@ class _StyledInput extends StatelessWidget {
                 borderRadius: BorderRadius.circular(15),
                 borderSide: BorderSide.none,
               ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               suffixIcon: isPassword
                   ? IconButton(
                       icon: Icon(

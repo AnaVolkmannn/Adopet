@@ -15,30 +15,20 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
   final picker = ImagePicker();
 
   // Campos gerais
-  String tipoAnuncio = 'Pet único';
   String? especieSelecionada;
   String? generoSelecionado;
+  String? porteSelecionado;
 
   // Pet único
   final TextEditingController nomeController = TextEditingController();
   final TextEditingController idadeAnosController = TextEditingController();
   final TextEditingController idadeMesesController = TextEditingController();
-  final TextEditingController corOlhosController = TextEditingController();
   bool petSemNome = false;
-  String? corSelecionada;
-  String? porteSelecionado;
+
   final List<File> fotosPetUnico = [];
 
   final List<String> especies = ['Gato', 'Cachorro'];
   final List<String> generos = ['Macho', 'Fêmea'];
-  final List<String> cores = [
-    'Preto',
-    'Branco',
-    'Marrom',
-    'Cinza',
-    'Caramelo',
-    'Mesclado',
-  ];
   final List<String> portes = ['Pequeno', 'Médio', 'Grande'];
 
   // 📸 Selecionar imagem
@@ -59,13 +49,12 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
     }
   }
 
-  // 🚀 Validação
+  // 🚀 VALIDAÇÃO + ENVIO DOS DADOS
   void _prosseguir() {
     bool idadeValida =
         idadeAnosController.text.isNotEmpty ||
         idadeMesesController.text.isNotEmpty;
 
-    // ⚠️ Agora não exige fotos
     if ((!petSemNome && nomeController.text.isEmpty) ||
         especieSelecionada == null ||
         generoSelecionado == null ||
@@ -82,14 +71,32 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
       return;
     }
 
-    Navigator.pushNamed(context, '/divulgar2');
+    // 🔥 MONTANDO O MAPA COM TODOS OS DADOS DA TELA 1
+    final Map<String, dynamic> petData = {
+      'name': petSemNome ? null : nomeController.text.trim(),
+      'noName': petSemNome,
+      'species': especieSelecionada,
+      'gender': generoSelecionado,
+      'size': porteSelecionado,
+      'ageYears': int.tryParse(idadeAnosController.text),
+      'ageMonths': int.tryParse(idadeMesesController.text),
+      'photos': fotosPetUnico, // lista de Files para upload na próxima tela
+    };
+
+    // 👉 MANDANDO PARA A TELA 2
+    Navigator.pushNamed(
+      context,
+      '/divulgar2',
+      arguments: petData,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return AnuncioBaseScreen(
       title: 'Criar Anúncio',
-      subtitle: 'Divulgue um pet seu ou um pet perdido para adoção responsável',
+      subtitle:
+          'Divulgue um pet seu ou um pet perdido para adoção responsável',
       onBack: () => Navigator.pop(context),
       onNext: _prosseguir,
       child: SingleChildScrollView(
@@ -116,6 +123,7 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
             maxLines: 1,
           ),
         if (!petSemNome) const SizedBox(height: 8),
+
         Row(
           children: [
             Checkbox(
@@ -216,7 +224,8 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
                   ),
                 ],
               ),
-            // 📸 Placeholder para adicionar novas imagens
+
+            // 📸 Botão adicionar foto
             GestureDetector(
               onTap: _selecionarImagemUnica,
               child: Container(
@@ -229,7 +238,10 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
                   ),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.add_a_photo, color: Color(0xFFDC004E)),
+                child: const Icon(
+                  Icons.add_a_photo,
+                  color: Color(0xFFDC004E),
+                ),
               ),
             ),
           ],
