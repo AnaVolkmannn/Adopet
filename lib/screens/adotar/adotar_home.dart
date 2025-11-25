@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../widgets/custom_drawer.dart';
 
 class AdotarHome extends StatefulWidget {
@@ -16,30 +17,7 @@ class _AdotarHomeState extends State<AdotarHome> {
   List<String> _sugestoes = [];
   String? _cidadeSelecionada;
 
-  final List<Map<String, String>> pets = const [
-    {
-      'nome': 'CACIQUE',
-      'idade': '2 meses',
-      'cidade': 'Jaraguá do Sul',
-      'imagem': 'https://placedog.net/400/400',
-      'data': '2025-11-04T14:30:00'
-    },
-    {
-      'nome': 'BOLT',
-      'idade': '1 ano',
-      'cidade': 'Joinville',
-      'imagem': 'https://placedog.net/400/400',
-      'data': '2025-11-03T18:10:00'
-    },
-    {
-      'nome': 'MEL',
-      'idade': '3 anos',
-      'cidade': 'Guaramirim',
-      'imagem': 'https://placedog.net/400/400',
-      'data': '2025-11-02T09:45:00'
-    },
-  ];
-
+  // 🔍 Busca cidades no IBGE
   Future<void> _buscarCidades(String query) async {
     if (query.isEmpty) {
       setState(() => _sugestoes = []);
@@ -66,23 +44,29 @@ class _AdotarHomeState extends State<AdotarHome> {
     }
   }
 
+  String _formatarIdade(int? anos, int? meses) {
+    if ((anos == null || anos == 0) && (meses == null || meses == 0)) {
+      return 'Idade não informada';
+    }
+
+    final partes = <String>[];
+
+    if (anos != null && anos > 0) {
+      partes.add('$anos ${anos == 1 ? "ano" : "anos"}');
+    }
+
+    if (meses != null && meses > 0) {
+      partes.add('$meses ${meses == 1 ? "mês" : "meses"}');
+    }
+
+    return partes.join(' e ');
+  }
+
   @override
   Widget build(BuildContext context) {
-    final petsFiltrados = _cidadeSelecionada == null
-        ? pets
-        : pets
-            .where((pet) => pet['cidade']!
-                .toLowerCase()
-                .contains(_cidadeSelecionada!.toLowerCase()))
-            .toList();
-
     return Scaffold(
       backgroundColor: const Color(0xFFFFF7E6),
 
-      // ❌ Removemos o endDrawer (não usamos mais)
-      // endDrawer: const CustomDrawer(),
-
-      // 🩷 Cabeçalho idêntico ao AnuncioBaseScreen
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(115),
         child: AppBar(
@@ -137,7 +121,7 @@ class _AdotarHomeState extends State<AdotarHome> {
                     onPressed: () {
                       showDialog(
                         context: context,
-                        barrierColor: Colors.transparent, // sem fundo cinza!
+                        barrierColor: Colors.transparent,
                         builder: (_) => const CustomDrawer(),
                       );
                     },
@@ -149,13 +133,12 @@ class _AdotarHomeState extends State<AdotarHome> {
         ),
       ),
 
-      // 🐾 Corpo da tela
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             children: [
-              // 🔍 Campo de busca
+              // 🔍 Campo de busca de cidade
               TextField(
                 controller: _cidadeController,
                 decoration: InputDecoration(
@@ -180,7 +163,7 @@ class _AdotarHomeState extends State<AdotarHome> {
                 onChanged: _buscarCidades,
               ),
 
-              // 🔹 Sugestões
+              // 🔹 Sugestões de cidade
               if (_sugestoes.isNotEmpty)
                 Container(
                   margin: const EdgeInsets.only(top: 6, bottom: 10),
@@ -213,97 +196,253 @@ class _AdotarHomeState extends State<AdotarHome> {
               else
                 const SizedBox(height: 10),
 
-              // 🐶 Lista de pets
+              // 🐶 Lista vindo do Firestore
               Expanded(
-                child: ListView.builder(
-                  itemCount: petsFiltrados.length,
-                  itemBuilder: (context, index) {
-                    final pet = petsFiltrados[index];
-                    final dataAnuncio = pet['data'] != null
-                        ? DateFormat('dd/MM/yyyy • HH:mm')
-                            .format(DateTime.parse(pet['data']!))
-                        : 'Data não informada';
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('pets')
+                      .orderBy('createdAt', descending: true)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child:
+                            CircularProgressIndicator(color: Color(0xFFDC004E)),
+                      );
+                    }
 
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/adotar_detalhes',
-                          arguments: pet,
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text(
+                          'Erro ao carregar pets.\n${snapshot.error}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      );
+                    }
+
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'Nenhum pet disponível no momento.',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 16,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      );
+                    }
+
+                    // Filtra por status e cidade (se selecionada)
+                    final docs = snapshot.data!.docs.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+
+                      final status =
+                          (data['status'] ?? '').toString().toLowerCase();
+                      if (status != 'ativo') return false;
+
+                      if (_cidadeSelecionada == null ||
+                          _cidadeSelecionada!.isEmpty) {
+                        return true;
+                      }
+
+                      final city =
+                          (data['city'] ?? '').toString().toLowerCase();
+                      return city
+                          .contains(_cidadeSelecionada!.toLowerCase());
+                    }).toList();
+
+                    if (docs.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'Nenhum pet encontrado para essa cidade.',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 16,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        final doc = docs[index];
+                        final data = doc.data() as Map<String, dynamic>;
+
+                        // Nome
+                        final nome = (data['name'] ?? 'Pet sem nome') as String;
+
+                        // Idade
+                        int? ageYears;
+                        int? ageMonths;
+                        final ay = data['ageYears'];
+                        final am = data['ageMonths'];
+                        if (ay is int) {
+                          ageYears = ay;
+                        } else if (ay is num) {
+                          ageYears = ay.toInt();
+                        }
+                        if (am is int) {
+                          ageMonths = am;
+                        } else if (am is num) {
+                          ageMonths = am.toInt();
+                        }
+                        final idadeTexto = _formatarIdade(ageYears, ageMonths);
+
+                        // Cidade
+                        final cidade = (data['city'] ?? 'Cidade não informada')
+                            .toString();
+
+                        // Data do anúncio
+                        String dataTexto = 'Data não informada';
+                        final createdAt = data['createdAt'];
+                        if (createdAt != null) {
+                          DateTime? dt;
+                          if (createdAt is Timestamp) {
+                            dt = createdAt.toDate();
+                          } else if (createdAt is DateTime) {
+                            dt = createdAt;
+                          }
+                          if (dt != null) {
+                            dataTexto =
+                                DateFormat('dd/MM/yyyy • HH:mm').format(dt);
+                          }
+                        }
+
+                        // Imagem (photoUrls[0] ou placeholder)
+                        String? imageUrl;
+                        final photos = data['photoUrls'];
+                        if (photos != null &&
+                            photos is List &&
+                            photos.isNotEmpty &&
+                            photos.first != null &&
+                            photos.first is String &&
+                            (photos.first as String).trim().isNotEmpty) {
+                          imageUrl = photos.first as String;
+                        } else {
+                          imageUrl = null;
+                        }
+
+                        // Mapa de argumentos para a tela de detalhes
+                        final petArgs = <String, dynamic>{
+                          'id': doc.id,
+                          'nome': nome,
+                          'idade': idadeTexto,
+                          'cidade': cidade,
+                          'imagem': imageUrl,
+                          'descricao': data['description'] ?? '',
+                          'adType': data['adType'] ?? '',
+                        };
+
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/adotar_detalhes',
+                              arguments: petArgs,
+                            );
+                          },
+                          child: Card(
+                            elevation: 3,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            margin: const EdgeInsets.only(bottom: 16),
+                            child: Row(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(16),
+                                    bottomLeft: Radius.circular(16),
+                                  ),
+                                  child: imageUrl != null
+                                      ? Image.network(
+                                          imageUrl,
+                                          width: 120,
+                                          height: 120,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error,
+                                                  stackTrace) =>
+                                              Container(
+                                            width: 120,
+                                            height: 120,
+                                            color: Colors.grey[300],
+                                            child: const Icon(
+                                              Icons.pets,
+                                              size: 50,
+                                              color: Colors.white70,
+                                            ),
+                                          ),
+                                        )
+                                      : Container(
+                                          width: 120,
+                                          height: 120,
+                                          color: Colors.grey[300],
+                                          child: const Icon(
+                                            Icons.pets,
+                                            size: 50,
+                                            color: Colors.white70,
+                                          ),
+                                        ),
+                                ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          nome,
+                                          style: const TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFFDC004E),
+                                          ),
+                                        ),
+                                        Text(
+                                          idadeTexto,
+                                          style: const TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        Text(
+                                          cidade,
+                                          style: const TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontSize: 13,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Align(
+                                          alignment: Alignment.bottomRight,
+                                          child: Text(
+                                            dataTexto,
+                                            style: const TextStyle(
+                                              fontFamily: 'Poppins',
+                                              fontSize: 12,
+                                              color: Colors.grey,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const Icon(Icons.chevron_right,
+                                    color: Color(0xFFDC004E)),
+                              ],
+                            ),
+                          ),
                         );
                       },
-                      child: Card(
-                        elevation: 3,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        margin: const EdgeInsets.only(bottom: 16),
-                        child: Row(
-                          children: [
-                            ClipRRect(
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(16),
-                                bottomLeft: Radius.circular(16),
-                              ),
-                              child: Image.network(
-                                pet['imagem']!,
-                                width: 120,
-                                height: 120,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      pet['nome']!,
-                                      style: const TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFFDC004E),
-                                      ),
-                                    ),
-                                    Text(
-                                      pet['idade']!,
-                                      style: const TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    Text(
-                                      pet['cidade']!,
-                                      style: const TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontSize: 13,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Align(
-                                      alignment: Alignment.bottomRight,
-                                      child: Text(
-                                        dataAnuncio,
-                                        style: const TextStyle(
-                                          fontFamily: 'Poppins',
-                                          fontSize: 12,
-                                          color: Colors.grey,
-                                          fontStyle: FontStyle.italic,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const Icon(Icons.chevron_right,
-                                color: Color(0xFFDC004E)),
-                          ],
-                        ),
-                      ),
                     );
                   },
                 ),
