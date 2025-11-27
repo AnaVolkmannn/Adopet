@@ -55,22 +55,15 @@ class MeusAnunciosScreen extends StatelessWidget {
       ),
 
       body: StreamBuilder<QuerySnapshot>(
-        // 2) POR ENQUANTO sem orderBy pra não ter problema de índice
         stream: FirebaseFirestore.instance
             .collection('pets')
             .where('tutorId', isEqualTo: user.uid)
             .snapshots(),
         builder: (context, snapshot) {
-          // DEBUG: mostra estado no console
-          // (isso aparece no terminal/console do VS Code)
-          // ignore: avoid_print
-          print('ConnectionState: ${snapshot.connectionState}');
-          // ignore: avoid_print
-          print('Has error: ${snapshot.hasError}');
-          if (snapshot.hasData) {
-            // ignore: avoid_print
-            print('Docs encontrados: ${snapshot.data!.docs.length}');
-          }
+          // DEBUG opcional
+          // print('ConnectionState: ${snapshot.connectionState}');
+          // print('Has error: ${snapshot.hasError}');
+          // if (snapshot.hasData) print('Docs: ${snapshot.data!.docs.length}');
 
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
@@ -110,7 +103,7 @@ class MeusAnunciosScreen extends StatelessWidget {
               final doc = anuncios[index];
               final data = doc.data() as Map<String, dynamic>;
 
-              // -------- TRATAR IMAGEM COM MÁXIMA SEGURANÇA --------
+              // -------- TRATAR IMAGEM COM SEGURANÇA --------
               String? imageUrl;
               final photos = data['photoUrls'];
 
@@ -180,7 +173,7 @@ class MeusAnunciosScreen extends StatelessWidget {
 
                     // NOME
                     Text(
-                      data['name'] ?? 'Pet sem nome',
+                      (data['name'] ?? 'Pet sem nome') as String,
                       style: const TextStyle(
                         color: Color(0xFFDC004E),
                         fontWeight: FontWeight.bold,
@@ -231,12 +224,31 @@ class MeusAnunciosScreen extends StatelessWidget {
                         ),
                         TextButton(
                           onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content:
-                                    Text('Função de edição será adicionada.'),
-                                backgroundColor: Colors.orange,
-                              ),
+                            // Monta o map com os dados atuais do anúncio
+                            final petData = {
+                              'mode': 'edit',
+                              'petId': doc.id,
+                              'name': data['name'],
+                              'noName': data['noName'],
+                              'species': data['species'],
+                              'gender': data['gender'],
+                              'size': data['size'],
+                              'ageYears': data['ageYears'],
+                              'ageMonths': data['ageMonths'],
+                              'adType': data['adType'],
+                              'state': data['state'],
+                              'city': data['city'],
+                              'description': data['description'],
+                              'foundDate': data['foundDate'],
+                              'contactPhone': data['contactPhone'],
+                              'contactEmail': data['contactEmail'],
+                              'photoUrls': data['photoUrls'],
+                            };
+
+                            Navigator.pushNamed(
+                              context,
+                              '/divulgar1',
+                              arguments: petData,
                             );
                           },
                           child: const Text(
