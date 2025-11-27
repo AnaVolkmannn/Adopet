@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../widgets/anuncio_base_screen.dart';
@@ -31,6 +32,59 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
   final List<String> generos = ['Macho', 'Fêmea'];
   final List<String> portes = ['Pequeno', 'Médio', 'Grande'];
 
+  // 🔹 CONTROLE DE EDIÇÃO
+  bool _isEdit = false;
+  Map<String, dynamic>? _originalData;
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) return;
+
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map<String, dynamic>) {
+      _originalData = Map<String, dynamic>.from(args);
+      _isEdit = (_originalData?['mode'] == 'edit');
+
+      if (_isEdit) {
+        // Preenche campos com dados do anúncio existente
+        petSemNome = _originalData?['noName'] ?? false;
+
+        if (!petSemNome) {
+          nomeController.text = _originalData?['name'] ?? '';
+        }
+
+        especieSelecionada = _originalData?['species'];
+        generoSelecionado = _originalData?['gender'];
+        porteSelecionado = _originalData?['size'];
+
+        final ageYears = _originalData?['ageYears'];
+        final ageMonths = _originalData?['ageMonths'];
+
+        if (ageYears != null) {
+          idadeAnosController.text = ageYears.toString();
+        }
+        if (ageMonths != null) {
+          idadeMesesController.text = ageMonths.toString();
+        }
+
+        // Fotos: você só tem URLs (photoUrls) no anúncio.
+        // Se quiser permitir edição de fotos, dá pra montar um fluxo próprio depois.
+      }
+    }
+
+    _initialized = true;
+  }
+
+  @override
+  void dispose() {
+    nomeController.dispose();
+    idadeAnosController.dispose();
+    idadeMesesController.dispose();
+    super.dispose();
+  }
+
   // 📸 Selecionar imagem
   Future<void> _selecionarImagemUnica() async {
     if (fotosPetUnico.length >= 3) {
@@ -49,9 +103,9 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
     }
   }
 
-  // 🚀 VALIDAÇÃO + ENVIO DOS DADOS
+  // 🚀 VALIDAÇÃO + ENVIO DOS DADOS PARA A TELA 2
   void _prosseguir() {
-    bool idadeValida =
+    final idadeValida =
         idadeAnosController.text.isNotEmpty ||
         idadeMesesController.text.isNotEmpty;
 
@@ -71,8 +125,15 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
       return;
     }
 
-    // 🔥 MONTANDO O MAPA COM TODOS OS DADOS DA TELA 1
+    // 🔥 MONTA O MAP COM BASE NO QUE JÁ EXISTIA + O QUE FOI EDITADO/CRIADO AQUI
     final Map<String, dynamic> petData = {
+      // se estiver editando, preserva tudo que veio do anúncio (petId, adType, state, etc.)
+      ...?_originalData,
+
+      // garante que o modo continua consistente
+      'mode': _isEdit ? 'edit' : 'create',
+
+      // sobrescreve com os dados atuais da tela 1
       'name': petSemNome ? null : nomeController.text.trim(),
       'noName': petSemNome,
       'species': especieSelecionada,
@@ -80,7 +141,9 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
       'size': porteSelecionado,
       'ageYears': int.tryParse(idadeAnosController.text),
       'ageMonths': int.tryParse(idadeMesesController.text),
-      'photos': fotosPetUnico, // lista de Files para upload na próxima tela
+
+      // novas fotos (se o usuário adicionou agora)
+      'photos': fotosPetUnico,
     };
 
     // 👉 MANDANDO PARA A TELA 2
@@ -94,9 +157,10 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
   @override
   Widget build(BuildContext context) {
     return AnuncioBaseScreen(
-      title: 'Criar Anúncio',
-      subtitle:
-          'Divulgue um pet seu ou um pet perdido para adoção responsável',
+      title: _isEdit ? 'Editar Anúncio' : 'Criar Anúncio',
+      subtitle: _isEdit
+          ? 'Atualize as informações do seu pet'
+          : 'Divulgue um pet seu ou um pet perdido para adoção responsável',
       onBack: () => Navigator.pop(context),
       onNext: _prosseguir,
       child: SingleChildScrollView(
@@ -155,7 +219,12 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
           decoration: _decoracaoCampo(),
           hint: const Text('Selecione a espécie'),
           items: especies
-              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e,
+                  child: Text(e),
+                ),
+              )
               .toList(),
           onChanged: (v) => setState(() => especieSelecionada = v),
         ),
@@ -168,7 +237,12 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
           decoration: _decoracaoCampo(),
           hint: const Text('Selecione o gênero'),
           items: generos
-              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e,
+                  child: Text(e),
+                ),
+              )
               .toList(),
           onChanged: (v) => setState(() => generoSelecionado = v),
         ),
@@ -181,7 +255,12 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
           decoration: _decoracaoCampo(),
           hint: const Text('Selecione o porte'),
           items: portes
-              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e,
+                  child: Text(e),
+                ),
+              )
               .toList(),
           onChanged: (v) => setState(() => porteSelecionado = v),
         ),

@@ -12,8 +12,12 @@ class DivulgarPet03 extends StatefulWidget {
 class _DivulgarPet03State extends State<DivulgarPet03> {
   bool _declaracaoAceita = false;
 
-  // Dados vindos das telas 1 e 2
+  // Dados vindos das telas 1 e 2 (e possivelmente do anúncio original)
   Map<String, dynamic>? _petData;
+
+  // Modo criação/edição
+  bool _isEdit = false;
+  bool _initialized = false;
 
   // Controladores
   final TextEditingController telefoneController = TextEditingController();
@@ -23,12 +27,37 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    if (_petData == null) {
-      final args = ModalRoute.of(context)?.settings.arguments;
-      if (args is Map<String, dynamic>) {
-        _petData = Map<String, dynamic>.from(args);
+    if (_initialized) return;
+
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map<String, dynamic>) {
+      _petData = Map<String, dynamic>.from(args);
+      _isEdit = (_petData?['mode'] == 'edit');
+
+      if (_isEdit) {
+        final phone = _petData?['contactPhone'];
+        final email = _petData?['contactEmail'];
+
+        if (phone is String && phone.trim().isNotEmpty) {
+          telefoneController.text = phone;
+        }
+        if (email is String && email.trim().isNotEmpty) {
+          emailController.text = email;
+        }
+
+        // Se você quiser que na edição a declaração já venha marcada:
+        // _declaracaoAceita = true;
       }
     }
+
+    _initialized = true;
+  }
+
+  @override
+  void dispose() {
+    telefoneController.dispose();
+    emailController.dispose();
+    super.dispose();
   }
 
   // FINALIZAÇÃO
@@ -65,15 +94,18 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
 
     // 🔥 COMPLETA O MAPA COM OS DADOS DA TELA 3
     final Map<String, dynamic> finalPetData = {
-      ..._petData!, // dados das telas 1 e 2
+      ..._petData!, // dados das telas 1 e 2 (e do anúncio original, se edição)
+
+      // garante que o modo continua consistente
+      'mode': _isEdit ? 'edit' : (_petData?['mode'] ?? 'create'),
+
       'contactPhone': telefoneController.text.trim(),
       'contactEmail': emailController.text.trim().isEmpty
           ? null
           : emailController.text.trim(),
     };
 
-    // 👉 Aqui em vez de só ir para success,
-    // vamos passar para o fluxo que salva no Firestore.
+    // 👉 manda para a tela de sucesso (que salva no Firestore)
     Navigator.pushNamed(
       context,
       '/success',
@@ -86,8 +118,10 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
     return AnuncioBaseScreen(
       onBack: () => Navigator.pop(context),
       onNext: _proximoPasso,
-      title: 'Criar Anúncio',
-      subtitle: 'Insira suas informações de contato',
+      title: _isEdit ? 'Editar Anúncio' : 'Criar Anúncio',
+      subtitle: _isEdit
+          ? 'Atualize suas informações de contato'
+          : 'Insira suas informações de contato',
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -138,7 +172,7 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: Color(0xFFDC004E).withOpacity(0.4),
+                  color: const Color(0xFFDC004E).withOpacity(0.4),
                   width: 1.5,
                 ),
                 color: const Color(0xFFFFE6EC),

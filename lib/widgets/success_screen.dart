@@ -21,7 +21,7 @@ class _SuccessScreenState extends State<SuccessScreen> {
   void initState() {
     super.initState();
 
-    // 🔥 IMPORTANTE: resolver erro de dependOnInheritedWidget
+    // 🔥 IMPORTANTE: evita erro de dependOnInheritedWidget no initState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _salvarAnuncio();
     });
@@ -29,11 +29,23 @@ class _SuccessScreenState extends State<SuccessScreen> {
 
   Future<void> _salvarAnuncio() async {
     try {
-      final finalPetData =
-          ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+      final route = ModalRoute.of(context);
+      final args = route?.settings.arguments;
+
+      if (args == null || args is! Map<String, dynamic>) {
+        if (!mounted) return;
+        setState(() {
+          _errorMessage = "Dados do anúncio não encontrados.";
+          _isSaving = false;
+        });
+        return;
+      }
+
+      final finalPetData = Map<String, dynamic>.from(args);
 
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
+        if (!mounted) return;
         setState(() {
           _errorMessage = "Usuário não autenticado.";
           _isSaving = false;
@@ -41,15 +53,37 @@ class _SuccessScreenState extends State<SuccessScreen> {
         return;
       }
 
-      // -------- UPLOAD DAS FOTOS --------
+      // -------- DEFINIR SE É CRIAÇÃO OU EDIÇÃO --------
+      final String mode = (finalPetData['mode'] ?? 'create') as String;
+      final bool isEdit = mode == 'edit';
+      final String? petIdFromData = finalPetData['petId'] as String?;
+
+      // -------- FOTOS --------
+      // fotos novas (Files) vindas das telas
+      final photos = finalPetData['photos'];
+      List<File> arquivos = [];
+      if (photos is List) {
+        try {
+          arquivos = photos.cast<File>();
+        } catch (_) {
+          arquivos = [];
+        }
+      }
+
+      // fotoUrls antigas (se veio de um anúncio já salvo)
+      final oldPhotoUrls =
+          (finalPetData['photoUrls'] as List?)?.cast<String>() ?? [];
+
       List<String> fotoUrls = [];
 
-      final photos = finalPetData['photos'];
-
-      if (photos != null && photos is List<File>) {
-        for (File file in photos) {
+      if (arquivos.isEmpty) {
+        // 👇 Nenhuma nova foto selecionada → reaproveita as antigas (se existirem)
+        fotoUrls = oldPhotoUrls;
+      } else {
+        // 👇 Subir novas fotos e usar as URLs novas (você pode mudar pra mesclar se quiser)
+        for (File file in arquivos) {
           final String fileName =
-              'pets/${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+              'pets/${user.uid}_${DateTime.now().millisecondsSinceEpoch}_${fotoUrls.length}.jpg';
 
           final ref = FirebaseStorage.instance.ref().child(fileName);
 
@@ -61,19 +95,25 @@ class _SuccessScreenState extends State<SuccessScreen> {
       }
 
       // -------- FIRESTORE --------
-      final docRef =
-          FirebaseFirestore.instance.collection('pets').doc(); // gera ID
+      final collection = FirebaseFirestore.instance.collection('pets');
 
-      await docRef.set({
+      // Se for edição e tiver petId, usamos o mesmo doc. Senão, criamos um novo.
+      final docRef =
+          (isEdit && petIdFromData != null && petIdFromData.isNotEmpty)
+              ? collection.doc(petIdFromData)
+              : collection.doc();
+
+      // Monta o map com os dados finais
+      final Map<String, dynamic> dataToSave = {
         "petId": docRef.id,
         "tutorId": user.uid,
         "name": finalPetData["name"],
-        "noName": finalPetData["noName"],
+        "noName": finalPetData["noName"] ?? false,
         "species": finalPetData["species"],
         "gender": finalPetData["gender"],
         "size": finalPetData["size"],
-        "ageYears": finalPetData["ageYears"],
-        "ageMonths": finalPetData["ageMonths"],
+        "ageYears": finalPetData["ageYears"] ?? 0,
+        "ageMonths": finalPetData["ageMonths"] ?? 0,
         "photoUrls": fotoUrls,
         "adType": finalPetData["adType"],
         "state": finalPetData["state"],
@@ -83,14 +123,26 @@ class _SuccessScreenState extends State<SuccessScreen> {
         "contactPhone": finalPetData["contactPhone"],
         "contactEmail": finalPetData["contactEmail"],
         "status": "ativo",
-        "createdAt": FieldValue.serverTimestamp(),
         "updatedAt": FieldValue.serverTimestamp(),
-      });
+      };
 
+      // Só define createdAt quando for criação
+      if (!isEdit) {
+        dataToSave["createdAt"] = FieldValue.serverTimestamp();
+      }
+
+      // Se for edição, podemos fazer merge pra não apagar campos antigos
+      await docRef.set(
+        dataToSave,
+        SetOptions(merge: isEdit),
+      );
+
+      if (!mounted) return;
       setState(() {
         _isSaving = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = "Erro ao salvar anúncio: $e";
         _isSaving = false;
