@@ -23,6 +23,7 @@ alterações finais
 - trazer fotos quando for pra editar
 - arrumar carrossel nos detalhes do pet
 - confirmação ao excluir anuncio
+- pagina de solicitações de adoção
 ---------------------------------------------------
 - tirar email da terceira tela (usuario ja esta logado com email)
 - colocar imagem do gatinho
