@@ -53,18 +53,12 @@ class MeusAnunciosScreen extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('pets')
             .where('tutorId', isEqualTo: user.uid)
             .snapshots(),
         builder: (context, snapshot) {
-          // DEBUG opcional
-          // print('ConnectionState: ${snapshot.connectionState}');
-          // print('Has error: ${snapshot.hasError}');
-          // if (snapshot.hasData) print('Docs: ${snapshot.data!.docs.length}');
-
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(color: AppColors.primary),
@@ -201,17 +195,74 @@ class MeusAnunciosScreen extends StatelessWidget {
                       children: [
                         TextButton(
                           onPressed: () async {
+                            // 🔹 Diálogo de confirmação
+                            final bool? confirmar = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) {
+                                return AlertDialog(
+                                  title: const Text(
+                                    'Confirmar exclusão',
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  content: const Text(
+                                    'Deseja realmente excluir este anúncio?\n'
+                                    'Essa ação não pode ser desfeita.',
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(ctx).pop(false);
+                                      },
+                                      child: const Text(
+                                        'Cancelar',
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(ctx).pop(true);
+                                      },
+                                      child: const Text(
+                                        'Excluir',
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          color: Color(0xFFDC004E),
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+
+                            // Se o usuário cancelou ou fechou o diálogo
+                            if (confirmar != true) return;
+
+                            // 🔥 Exclui de fato
                             await FirebaseFirestore.instance
                                 .collection('pets')
                                 .doc(doc.id)
                                 .delete();
 
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Anúncio excluído.'),
-                                backgroundColor: Color(0xFFDC004E),
-                              ),
-                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Anúncio excluído.'),
+                                  backgroundColor: Color(0xFFDC004E),
+                                ),
+                              );
+                            }
                           },
                           child: const Text(
                             'Excluir',

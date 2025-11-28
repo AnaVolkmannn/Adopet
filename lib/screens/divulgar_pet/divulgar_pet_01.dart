@@ -69,8 +69,7 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
           idadeMesesController.text = ageMonths.toString();
         }
 
-        // Fotos: você só tem URLs (photoUrls) no anúncio.
-        // Se quiser permitir edição de fotos, dá pra montar um fluxo próprio depois.
+        // Fotos: se quiser tratar edição de fotos depois, aqui é o lugar :)
       }
     }
 
@@ -105,14 +104,10 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
 
   // 🚀 VALIDAÇÃO + ENVIO DOS DADOS PARA A TELA 2
   void _prosseguir() {
-    final idadeValida =
-        idadeAnosController.text.isNotEmpty ||
-        idadeMesesController.text.isNotEmpty;
-
+    // Validação dos campos obrigatórios básicos
     if ((!petSemNome && nomeController.text.isEmpty) ||
         especieSelecionada == null ||
         generoSelecionado == null ||
-        !idadeValida ||
         porteSelecionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -123,6 +118,53 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
         ),
       );
       return;
+    }
+
+    // 🔹 Validação da idade (anos e meses)
+    final String anosText = idadeAnosController.text.trim();
+    final String mesesText = idadeMesesController.text.trim();
+
+    final bool temAnos = anosText.isNotEmpty;
+    final bool temMeses = mesesText.isNotEmpty;
+
+    // Pelo menos um dos campos deve ser preenchido
+    if (!temAnos && !temMeses) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Informe a idade em anos e/ou meses.'),
+          backgroundColor: Color(0xFFDC004E),
+        ),
+      );
+      return;
+    }
+
+    int? ageYears;
+    int? ageMonths;
+
+    if (temAnos) {
+      ageYears = int.tryParse(anosText);
+      if (ageYears == null || ageYears < 0 || ageYears >= 20) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Os anos devem ser um número entre 1 e 19.'),
+            backgroundColor: Color(0xFFDC004E),
+          ),
+        );
+        return;
+      }
+    }
+
+    if (temMeses) {
+      ageMonths = int.tryParse(mesesText);
+      if (ageMonths == null || ageMonths <= 0 || ageMonths >= 12) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Os meses devem ser um número entre 1 e 11.'),
+            backgroundColor: Color(0xFFDC004E),
+          ),
+        );
+        return;
+      }
     }
 
     // 🔥 MONTA O MAP COM BASE NO QUE JÁ EXISTIA + O QUE FOI EDITADO/CRIADO AQUI
@@ -139,8 +181,8 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
       'species': especieSelecionada,
       'gender': generoSelecionado,
       'size': porteSelecionado,
-      'ageYears': int.tryParse(idadeAnosController.text),
-      'ageMonths': int.tryParse(idadeMesesController.text),
+      'ageYears': ageYears,
+      'ageMonths': ageMonths,
 
       // novas fotos (se o usuário adicionou agora)
       'photos': fotosPetUnico,
