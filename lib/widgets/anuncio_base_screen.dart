@@ -97,12 +97,23 @@ class AnuncioBaseScreen extends StatelessWidget {
       // 🩶 Rodapé fixo com botões padrão
       bottomSheet: Container(
         color: const Color(0xFFFFF7E6),
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
+
+        // 👉 Só margem inferior agora
+        padding: const EdgeInsets.only(bottom: 60, left: 24, right: 24, top: 10),
+
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            CustomButton(text: 'Voltar', small: true, onPressed: onBack),
-            CustomButton(text: 'Prosseguir', small: true, onPressed: onNext),
+            CustomButton(
+              text: 'Voltar',
+              small: true,
+              onPressed: onBack,
+            ),
+            CustomButton(
+              text: 'Prosseguir',
+              small: true,
+              onPressed: onNext,
+            ),
           ],
         ),
       ),

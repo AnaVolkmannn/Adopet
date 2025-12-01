@@ -337,15 +337,16 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
 
             CustomInput(
               label: "Descrição do pet e da situação",
-              hint: "Conte detalhes sobre o pet e o motivo do anúncio...",
+              hint: "Conte mais detalhes sobre o pet e o motivo do anúncio... Possui vacinas? Está castrado? Onde foi encontrado? etc.",
               controller: descricaoController,
               maxLines: 3,
             ),
 
             const SizedBox(height: 20),
 
+          if (_tipoSituacao == 'Achado')
             CustomInput(
-              label: "Data em que encontrou o pet (opcional)",
+              label: "Data em que encontrou o pet",
               hint: "dd/mm/aaaa",
               controller: dataController,
               keyboardType: TextInputType.number,

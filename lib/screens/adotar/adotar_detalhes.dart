@@ -13,7 +13,7 @@ class _AdotarDetalhesState extends State<AdotarDetalhes> {
   // ----------------------------------------------------------
   // CONTROLADOR DO CARROSSEL
   // ----------------------------------------------------------
-  final PageController _pageController = PageController();
+  PageController _pageController = PageController();
   int _currentPage = 0;
 
   @override
@@ -54,6 +54,14 @@ class _AdotarDetalhesState extends State<AdotarDetalhes> {
     return "($ddd) $first****-$last4";
   }
 
+  // 🔠 Pega apenas o primeiro nome
+  String _primeiroNome(String? nome) {
+    if (nome == null) return 'Nome não informado';
+    final trimmed = nome.trim();
+    if (trimmed.isEmpty) return 'Nome não informado';
+    return trimmed.split(RegExp(r'\s+')).first;
+  }
+
   // 🔍 Abre imagem em tela cheia com zoom
   void _abrirImagemFull(BuildContext context, String url) {
     showDialog(
@@ -82,14 +90,31 @@ class _AdotarDetalhesState extends State<AdotarDetalhes> {
     );
   }
 
-  void _irParaPagina(int index, int total) {
-    if (index < 0 || index >= total) return;
+  // 👉 Sempre que mudar de página via seta / thumb
+  // atualiza o controller E o _currentPage.
+void _irParaPagina(int index, int total) {
+  if (total == 0) return;
+
+  final int clamped = index.clamp(0, total - 1);
+
+  setState(() {
+    _currentPage = clamped;
+  });
+
+  if (_pageController.hasClients) {
     _pageController.animateToPage(
-      index,
+      clamped,
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeInOut,
     );
+  } else {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_pageController.hasClients) {
+        _pageController.jumpToPage(clamped);
+      }
+    });
   }
+}
 
   // ----------------------------------------------------------
   // BUILD
@@ -223,15 +248,23 @@ class _AdotarDetalhesState extends State<AdotarDetalhes> {
           final descricao =
               data['description'] ?? 'Sem descrição disponível.';
 
-          final tutorName = data['tutorName'] ?? 'Nome não informado';
           final telefoneTutor = data['contactPhone'] ?? "*****";
+
+          // Tutor
+          final String tutorId = (data['tutorId'] ?? '').toString();
+          final String fallbackTutorName =
+              (data['tutorName'] ?? 'Nome não informado').toString();
 
           // ----------- Imagens -------------------
           List<String> fotos = [];
           final rawPhotos = data['photoUrls'];
+
           if (rawPhotos is List) {
             fotos = rawPhotos.whereType<String>().toList();
           }
+
+          // 🔄 Sempre recria o PageController se o número de fotos mudar
+          _pageController = PageController(initialPage: _currentPage);
 
           const placeholderUrl =
               'https://cdn-icons-png.flaticon.com/512/194/194279.png';
@@ -239,9 +272,12 @@ class _AdotarDetalhesState extends State<AdotarDetalhes> {
           final String imagemPrincipal =
               fotos.isNotEmpty ? fotos.first : placeholderUrl;
 
-          // Garante que o índice atual não ultrapasse o total
+          // Garante que o index atual nunca passe o total
           if (fotos.isNotEmpty && _currentPage >= fotos.length) {
             _currentPage = fotos.length - 1;
+          }
+          if (fotos.isEmpty && _currentPage != 0) {
+            _currentPage = 0;
           }
 
           // Dados para a próxima tela
@@ -257,9 +293,48 @@ class _AdotarDetalhesState extends State<AdotarDetalhes> {
             'genero': genero,
             'porte': porte,
             'idade': idade,
-            'tutorId': data['tutorId'],
-            'tutorName': tutorName,
+            'tutorId': tutorId,
+            'tutorName': fallbackTutorName,
           };
+
+          // Widget que mostra o anunciante puxando do usuário
+          Widget anuncianteWidget;
+          if (tutorId.isEmpty) {
+            anuncianteWidget =
+                _infoRow("Anunciante", _primeiroNome(fallbackTutorName));
+          } else {
+            anuncianteWidget = FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(tutorId)
+                  .get(),
+              builder: (context, snapTutor) {
+                if (snapTutor.connectionState == ConnectionState.waiting) {
+                  return _infoRow("Anunciante", "Carregando...");
+                }
+
+                if (!snapTutor.hasData ||
+                    !snapTutor.data!.exists ||
+                    snapTutor.hasError) {
+                  return _infoRow(
+                    "Anunciante",
+                    _primeiroNome(fallbackTutorName),
+                  );
+                }
+
+                final userData =
+                    snapTutor.data!.data() as Map<String, dynamic>?;
+
+                // usa só 'name' mesmo, igual está no Firestore
+                final rawName =
+                    (userData?['name'] ?? fallbackTutorName).toString();
+
+                final primeiroNome = _primeiroNome(rawName);
+
+                return _infoRow("Anunciante", primeiroNome);
+              },
+            );
+          }
 
           // ----------------------------------------------------------
           // UI
@@ -336,7 +411,7 @@ class _AdotarDetalhesState extends State<AdotarDetalhes> {
                                         fotos.length,
                                       ),
                                       child: Container(
-                                        decoration: BoxDecoration(
+                                        decoration: const BoxDecoration(
                                           shape: BoxShape.circle,
                                           color: Colors.black45,
                                         ),
@@ -364,7 +439,7 @@ class _AdotarDetalhesState extends State<AdotarDetalhes> {
                                         fotos.length,
                                       ),
                                       child: Container(
-                                        decoration: BoxDecoration(
+                                        decoration: const BoxDecoration(
                                           shape: BoxShape.circle,
                                           color: Colors.black45,
                                         ),
@@ -527,7 +602,10 @@ class _AdotarDetalhesState extends State<AdotarDetalhes> {
                   const Divider(color: Color(0xFFDC004E)),
                   const SizedBox(height: 8),
 
-                  _infoRow("Anunciante", tutorName),
+                  // 👤 Nome do anunciante (primeiro nome do usuário)
+                  anuncianteWidget,
+
+                  // 📱 Telefone
                   _infoRow("Telefone", mascararTelefone(telefoneTutor)),
 
                   const SizedBox(height: 20),

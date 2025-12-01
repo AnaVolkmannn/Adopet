@@ -220,10 +220,17 @@ class _SignupScreenState extends State<SignupScreen> {
                 Center(
                   child: Column(
                     children: [
-                      Image.asset('assets/images/logov3.png', width: 220),
+                      // 🐾 Logo 2
+                      Padding(
+                        padding: const EdgeInsets.only(top: 50),
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 500,
+                        ),
+                      ),
                       const SizedBox(height: 20),
                       const Text(
-                        'Cadastrar',
+                        'Criar conta',
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 38,
@@ -249,6 +256,14 @@ class _SignupScreenState extends State<SignupScreen> {
                   label: 'Sobrenome',
                   hint: 'Digite seu sobrenome',
                   controller: _surnameController,
+                ),
+                const SizedBox(height: 18),
+
+                _StyledInput(
+                  label: 'E-mail',
+                  hint: 'Digite seu e-mail',
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
                 ),
 
                 const SizedBox(height: 35),
@@ -292,14 +307,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
                 const SizedBox(height: 35),
                 _sectionTitle("Segurança"),
-
-                _StyledInput(
-                  label: 'E-mail',
-                  hint: 'Digite seu e-mail',
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 18),
 
                 _StyledInput(
                   label: 'Senha',

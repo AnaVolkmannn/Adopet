@@ -227,62 +227,10 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
         ),
 
         const SizedBox(height: 20),
-
-        // ----------------------------
-        // DROPDOWN — ESPÉCIE
-        // ----------------------------
-        const Text('Espécie', style: _labelStyle),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          value: especieSelecionada,
-          decoration: _decoracaoCampoAdopet("Selecione a espécie"),
-          dropdownColor: const Color(0xFFFFE6EC),
-          style: const TextStyle(fontFamily: 'Poppins', color: Colors.black87),
-          items:
-              especies.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-          onChanged: (v) => setState(() => especieSelecionada = v),
-        ),
-
-        const SizedBox(height: 20),
-
-        // ----------------------------
-        // DROPDOWN — GÊNERO
-        // ----------------------------
-        const Text('Gênero', style: _labelStyle),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          value: generoSelecionado,
-          decoration: _decoracaoCampoAdopet("Selecione o gênero"),
-          dropdownColor: const Color(0xFFFFE6EC),
-          style: const TextStyle(fontFamily: 'Poppins', color: Colors.black87),
-          items:
-              generos.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-          onChanged: (v) => setState(() => generoSelecionado = v),
-        ),
-
-        const SizedBox(height: 20),
-
-        // ----------------------------
-        // DROPDOWN — PORTE
-        // ----------------------------
-        const Text('Porte do pet', style: _labelStyle),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          value: porteSelecionado,
-          decoration: _decoracaoCampoAdopet("Selecione o porte"),
-          dropdownColor: const Color(0xFFFFE6EC),
-          style: const TextStyle(fontFamily: 'Poppins', color: Colors.black87),
-          items:
-              portes.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-          onChanged: (v) => setState(() => porteSelecionado = v),
-        ),
-
-        const SizedBox(height: 25),
-
-        // ----------------------------
+         // ----------------------------
         // FOTOS
         // ----------------------------
-        const Text('Fotos (até 3) — opcional', style: _labelStyle),
+        const Text('Adicione até 3 fotos', style: _labelStyle),
         const SizedBox(height: 10),
 
         Wrap(
@@ -335,6 +283,57 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
                 ),
               ),
           ],
+        ),
+
+        const SizedBox(height: 25),
+        
+        // ----------------------------
+        // DROPDOWN — ESPÉCIE
+        // ----------------------------
+        const Text('Espécie', style: _labelStyle),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: especieSelecionada,
+          decoration: _decoracaoCampoAdopet("Selecione a espécie"),
+          dropdownColor: const Color(0xFFFFE6EC),
+          style: const TextStyle(fontFamily: 'Poppins', color: Colors.black87),
+          items:
+              especies.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+          onChanged: (v) => setState(() => especieSelecionada = v),
+        ),
+
+        const SizedBox(height: 20),
+
+        // ----------------------------
+        // DROPDOWN — GÊNERO
+        // ----------------------------
+        const Text('Gênero', style: _labelStyle),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: generoSelecionado,
+          decoration: _decoracaoCampoAdopet("Selecione o gênero"),
+          dropdownColor: const Color(0xFFFFE6EC),
+          style: const TextStyle(fontFamily: 'Poppins', color: Colors.black87),
+          items:
+              generos.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+          onChanged: (v) => setState(() => generoSelecionado = v),
+        ),
+
+        const SizedBox(height: 20),
+
+        // ----------------------------
+        // DROPDOWN — PORTE
+        // ----------------------------
+        const Text('Porte do pet', style: _labelStyle),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: porteSelecionado,
+          decoration: _decoracaoCampoAdopet("Selecione o porte"),
+          dropdownColor: const Color(0xFFFFE6EC),
+          style: const TextStyle(fontFamily: 'Poppins', color: Colors.black87),
+          items:
+              portes.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+          onChanged: (v) => setState(() => porteSelecionado = v),
         ),
 
         const SizedBox(height: 25),
