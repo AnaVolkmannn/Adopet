@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart'; // Import Firebase Core package
-import 'firebase_options.dart'; // Import the generated Firebase options file
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // 👈 Import do Firebase Auth
+import 'firebase_options.dart';
 
 import 'core/theme.dart';
 
@@ -25,19 +26,14 @@ import 'screens/adotar/adotar_interesse.dart';
 // Meus Anúncios
 import 'screens/meus_anuncios/meus_anuncios_screen.dart';
 
-// Your main function is now asynchronous to allow for Firebase initialization
+// 🚀 main assíncrona para inicializar o Firebase
 void main() async {
-  // Ensure that Flutter's widget binding is initialized.
-  // This is crucial before using platform channels or any Flutter plugin.
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase with the default options for the current platform.
-  // This uses the configuration generated in 'firebase_options.dart'.
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Once Firebase is initialized, run your Flutter application.
   runApp(const MyApp());
 }
 
@@ -50,10 +46,14 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Adopet',
       theme: appTheme,
-      initialRoute: '/',
+
+      // 🔑 Em vez de initialRoute, usamos um "portão" de autenticação
+      home: const AuthGate(),
 
       routes: {
-        '/': (context) => const SplashScreen(),
+        // Se quiser ainda usar a splash em algum lugar:
+        '/splash': (context) => const SplashScreen(),
+
         '/start': (context) => const StartScreen(),
         '/signup': (context) => const SignupScreen(),
         '/login': (context) => const LoginScreen(),
@@ -68,14 +68,42 @@ class MyApp extends StatelessWidget {
         '/success': (context) => const SuccessScreen(),
       },
 
-      // 🔒 Previne duplicação de Scaffold ao voltar de telas com menu
       builder: (context, child) {
         return MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: const TextScaler.linear(1.0)),
+          data: MediaQuery.of(context).copyWith(
+            textScaler: const TextScaler.linear(1.0),
+          ),
           child: child!,
         );
+      },
+    );
+  }
+}
+
+/// 🛡 Widget que decide pra onde o usuário vai:
+/// - Splash enquanto carrega
+/// - Home se já estiver logado
+/// - Start se não estiver logado
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // ⏳ Enquanto o Firebase está verificando sessão
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SplashScreen();
+        }
+
+        // ✅ Usuário logado: vai direto pra Home
+        if (snapshot.hasData) {
+          return const HomeScreen();
+        }
+
+        // 🚪 Ninguém logado: vai pra tela inicial (start)
+        return const StartScreen();
       },
     );
   }

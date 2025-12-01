@@ -18,15 +18,13 @@ adições:
 - "olhinho" pra ver e desver a senha
 
 alterações finais
-- formatar campos de data e telefone
+- formatar campos de data e telefone ------------
 - campos obrigatorios com *
-- trazer fotos quando for pra editar
+- trazer fotos quando for pra editar ---------------
 - arrumar carrossel nos detalhes do pet
-- confirmação ao excluir anuncio
-- pagina de solicitações de adoção
+- confirmação ao excluir anuncio --------------
 ---------------------------------------------------
-- tirar email da terceira tela (usuario ja esta logado com email)
+- tirar email da terceira tela (usuario ja esta logado com email) ------------
 - colocar imagem do gatinho
-- permitir pesquisar no filtro da api
-- manter sessao logada
+- manter sessao logada ------------
 - permitir administração basica de conta (trocar senha, colocar foto, endereço, contato, excluir conta)
