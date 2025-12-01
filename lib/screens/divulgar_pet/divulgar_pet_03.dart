@@ -23,8 +23,6 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
   @override
   void initState() {
     super.initState();
-
-    // 🔹 adiciona a máscara ao telefone
     telefoneController.addListener(_formatarTelefone);
   }
 
@@ -41,14 +39,13 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
 
       if (_isEdit) {
         final phone = _petData?['contactPhone'];
-        final email = _petData?['contactEmail'];
+        final mail = _petData?['contactEmail'];
 
-        // já formata automaticamente
         if (phone is String && phone.trim().isNotEmpty) {
           telefoneController.text = phone;
         }
-        if (email is String && email.trim().isNotEmpty) {
-          emailController.text = email;
+        if (mail is String && mail.trim().isNotEmpty) {
+          emailController.text = mail;
         }
       }
     }
@@ -65,12 +62,11 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
   }
 
   // ------------------------------------------------------------------
-  // 📱 FUNÇÃO DE FORMATAÇÃO DO TELEFONE -> (99) 99999-9999
+  // 📱 MÁSCARA DE TELEFONE -> (99) 99999-9999
   // ------------------------------------------------------------------
   void _formatarTelefone() {
     String text = telefoneController.text;
 
-    // remove tudo que não for número
     text = text.replaceAll(RegExp(r'[^0-9]'), '');
 
     if (text.length > 11) {
@@ -81,14 +77,13 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
 
     if (text.length >= 1) formatted = '(${text.substring(0, 2)}';
     if (text.length >= 2) formatted = '(${text.substring(0, 2)}) ';
-    if (text.length >= 3) formatted += text.substring(2, text.length);
+    if (text.length >= 3) formatted += text.substring(2);
 
     if (text.length > 7) {
       formatted =
           '(${text.substring(0, 2)}) ${text.substring(2, 7)}-${text.substring(7)}';
     }
 
-    // Evita loop infinito
     if (formatted != telefoneController.text) {
       final cursorPos = formatted.length;
       telefoneController.value = TextEditingValue(
@@ -98,104 +93,107 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
     }
   }
 
+  // ------------------------------------------------------------------
   // FINALIZAÇÃO
+  // ------------------------------------------------------------------
   void _proximoPasso() {
     if (!_declaracaoAceita) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Você precisa aceitar a Declaração de Veracidade.'),
-          backgroundColor: Color(0xFFDC004E),
-        ),
-      );
+      _erro("Você precisa aceitar a Declaração de Veracidade.");
       return;
     }
 
     if (telefoneController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Informe um telefone para contato.'),
-          backgroundColor: Color(0xFFDC004E),
-        ),
-      );
+      _erro("Informe um telefone para contato.");
       return;
     }
 
     if (_petData == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Erro ao carregar os dados do anúncio.'),
-          backgroundColor: Color(0xFFDC004E),
-        ),
-      );
+      _erro("Erro ao carregar os dados do anúncio.");
       return;
     }
 
     final Map<String, dynamic> finalPetData = {
       ..._petData!,
-      'mode': _isEdit ? 'edit' : (_petData?['mode'] ?? 'create'),
+      'mode': _isEdit ? 'edit' : 'create',
       'contactPhone': telefoneController.text.trim(),
       'contactEmail':
           emailController.text.trim().isEmpty ? null : emailController.text.trim(),
     };
 
-    Navigator.pushNamed(
-      context,
-      '/success',
-      arguments: finalPetData,
+    Navigator.pushNamed(context, '/success', arguments: finalPetData);
+  }
+
+  void _erro(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: const Color(0xFFDC004E),
+      ),
     );
   }
 
+  // ------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     return AnuncioBaseScreen(
       onBack: () => Navigator.pop(context),
       onNext: _proximoPasso,
       title: _isEdit ? 'Editar Anúncio' : 'Criar Anúncio',
-      subtitle:
-          _isEdit ? 'Atualize suas informações de contato' : 'Insira suas informações de contato',
+      subtitle: _isEdit
+          ? 'Atualize suas informações de contato'
+          : 'Insira suas informações de contato',
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Informações de contato',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: Color.fromRGBO(255, 92, 0, 1),
-              ),
+              style: _labelStyle,
             ),
             const SizedBox(height: 10),
 
+            // TELEFONE
             CustomInput(
               label: 'Telefone com WhatsApp',
               hint: '(DDD) 99999-9999',
               controller: telefoneController,
-              maxLines: 1,
               keyboardType: TextInputType.phone,
+              maxLines: 1,
             ),
+
             const SizedBox(height: 15),
+
+            // EMAIL
+            CustomInput(
+              label: 'E-mail (opcional)',
+              hint: 'exemplo@email.com',
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
+              maxLines: 1,
+            ),
+
+            const SizedBox(height: 25),
 
             const Divider(
               thickness: 2,
-              color: Color.fromRGBO(220, 0, 78, 1),
+              color: Color(0xFFDC004E),
               indent: 16,
               endIndent: 16,
             ),
 
             const SizedBox(height: 25),
 
+            // DECLARAÇÃO DE VERACIDADE
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
+                color: Color(0xFFFFE6EC),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: Color(0xFFDC004E).withOpacity(0.4),
                   width: 1.5,
                 ),
-                color: const Color(0xFFFFE6EC),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,14 +204,15 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
                     onChanged: (v) =>
                         setState(() => _declaracaoAceita = v ?? false),
                   ),
+
                   const Expanded(
                     child: Text(
                       'Declaração de Veracidade\n'
-                      'Confirmo que as informações fornecidas são verdadeiras e atualizadas, '
+                      'Confirmo que todas as informações fornecidas são verdadeiras e atualizadas, '
                       'e autorizo a divulgação deste pet na plataforma.',
                       style: TextStyle(
                         fontFamily: 'Poppins',
-                        fontSize: 13,
+                        fontSize: 14,
                         color: Color(0xFF5A5A5A),
                       ),
                     ),
@@ -221,9 +220,21 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
                 ],
               ),
             ),
+
+            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
+
+  // ------------------------------------------------------------------
+  // ESTILOS PADRÃO ADOPET
+  // ------------------------------------------------------------------
+  static const _labelStyle = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+    color: Color(0xFFDC004E),
+  );
 }

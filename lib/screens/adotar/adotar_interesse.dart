@@ -25,26 +25,24 @@ class _AdotarInteresseState extends State<AdotarInteresse> {
     super.dispose();
   }
 
-  InputDecoration _customInput(String label) {
+  // 🔹 INPUT PADRÃO ADOPET — MESMO DA TELA DE LOGIN
+  InputDecoration _inputAdopet(String hint) {
     return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(
-        fontFamily: 'Poppins',
-        color: Color(0xFFDC004E),
-        fontWeight: FontWeight.w600,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFDC004E), width: 2),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFDC004E), width: 1),
-      ),
       filled: true,
-      fillColor: const Color(0xFFFFF7E6),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      fillColor: const Color(0xFFFFE6EC),
+      hintText: hint,
+      hintStyle: const TextStyle(
+        color: Colors.black38,
+        fontFamily: 'Poppins',
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(15),
+        borderSide: BorderSide.none,
+      ),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 14,
+      ),
     );
   }
 
@@ -73,12 +71,10 @@ class _AdotarInteresseState extends State<AdotarInteresse> {
     try {
       final user = FirebaseAuth.instance.currentUser;
 
-      await FirebaseFirestore.instance
-          .collection('adoption_interests')
-          .add({
-        'petId': pet['id'],                 // veio do AdotarHome
+      await FirebaseFirestore.instance.collection('adoption_interests').add({
+        'petId': pet['id'],
         'petName': pet['nome'],
-        'tutorId': pet['tutorId'],          // se você passar isso depois no args
+        'tutorId': pet['tutorId'],
         'interestedUserId': user?.uid,
         'interestedName': nome,
         'interestedPhone': telefone,
@@ -96,8 +92,7 @@ class _AdotarInteresseState extends State<AdotarInteresse> {
         ),
       );
 
-      Navigator.pop(context); // volta pra tela de detalhes
-
+      Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -133,17 +128,14 @@ class _AdotarInteresseState extends State<AdotarInteresse> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 🔙 Botão voltar
                   IconButton(
                     icon: const Icon(Icons.arrow_back, color: Color(0xFFDC004E)),
                     onPressed: () => Navigator.pop(context),
                   ),
                   const SizedBox(width: 4),
 
-                  // 🩷 Título e subtítulo
                   Expanded(
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -162,14 +154,12 @@ class _AdotarInteresseState extends State<AdotarInteresse> {
                             fontFamily: 'Poppins',
                             fontSize: 13,
                             color: Color(0xFFFF5C00),
-                            height: 1.2,
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  // ☰ Botão do menu (abre Drawer customizado)
                   IconButton(
                     icon: const Icon(Icons.menu, color: Color(0xFFDC004E)),
                     onPressed: () {
@@ -193,7 +183,7 @@ class _AdotarInteresseState extends State<AdotarInteresse> {
           child: Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              color: const Color.fromARGB(255, 255, 255, 255),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               boxShadow: const [
                 BoxShadow(
@@ -222,16 +212,21 @@ class _AdotarInteresseState extends State<AdotarInteresse> {
                 const Divider(color: Color(0xFFDC004E)),
 
                 const SizedBox(height: 16),
+
+                // ⭐ INPUT NOME — PADRÃO ADOPET
                 TextField(
                   controller: _nomeController,
-                  decoration: _customInput('Seu nome completo'),
+                  decoration: _inputAdopet('Seu nome completo'),
                 ),
                 const SizedBox(height: 16),
+
+                // ⭐ INPUT TELEFONE — PADRÃO ADOPET
                 TextField(
                   controller: _telefoneController,
-                  decoration: _customInput('Telefone para contato'),
                   keyboardType: TextInputType.phone,
+                  decoration: _inputAdopet('Telefone para contato'),
                 ),
+
                 const SizedBox(height: 50),
 
                 const Text(
@@ -245,18 +240,18 @@ class _AdotarInteresseState extends State<AdotarInteresse> {
                 ),
                 const SizedBox(height: 8),
                 const Divider(color: Color(0xFFDC004E)),
-
                 const SizedBox(height: 16),
+
+                // ⭐ INPUT MENSAGEM — PADRÃO ADOPET
                 TextField(
                   controller: _mensagemController,
                   maxLines: 4,
-                  decoration:
-                      _customInput('Por que você quer adotar esse pet?'),
+                  decoration: _inputAdopet('Por que você quer adotar esse pet?'),
                 ),
 
                 const SizedBox(height: 32),
 
-                // ❤️ Botão principal
+                // ❤️ BOTÃO ENVIAR
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFDC004E),
@@ -269,16 +264,14 @@ class _AdotarInteresseState extends State<AdotarInteresse> {
                     ),
                     elevation: 2,
                   ),
-                  onPressed: _isSending
-                      ? null
-                      : () => _enviarSolicitacao(context),
+                  onPressed: _isSending ? null : () => _enviarSolicitacao(context),
                   child: _isSending
                       ? const SizedBox(
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(
-                            strokeWidth: 2,
                             color: Colors.white,
+                            strokeWidth: 2,
                           ),
                         )
                       : const Text(

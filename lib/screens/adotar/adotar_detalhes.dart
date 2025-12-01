@@ -2,8 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../widgets/custom_drawer.dart';
 
-class AdotarDetalhes extends StatelessWidget {
+class AdotarDetalhes extends StatefulWidget {
   const AdotarDetalhes({super.key});
+
+  @override
+  State<AdotarDetalhes> createState() => _AdotarDetalhesState();
+}
+
+class _AdotarDetalhesState extends State<AdotarDetalhes> {
+  // ----------------------------------------------------------
+  // CONTROLADOR DO CARROSSEL
+  // ----------------------------------------------------------
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  // ----------------------------------------------------------
+  // FUNÇÕES DE FORMATAÇÃO
+  // ----------------------------------------------------------
 
   String _formatarIdade(int? anos, int? meses) {
     if ((anos == null || anos == 0) && (meses == null || meses == 0)) {
@@ -20,12 +41,64 @@ class AdotarDetalhes extends StatelessWidget {
     return partes.join(' e ');
   }
 
+  // 🔒 Mascara telefone: (48) 9****-1234
+  String mascararTelefone(String telefone) {
+    final digits = telefone.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digits.length < 10) return "*****";
+
+    final ddd = digits.substring(0, 2);
+    final first = digits.substring(2, 3);
+    final last4 = digits.substring(digits.length - 4);
+
+    return "($ddd) $first****-$last4";
+  }
+
+  // 🔍 Abre imagem em tela cheia com zoom
+  void _abrirImagemFull(BuildContext context, String url) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.9),
+      builder: (_) {
+        return GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Center(
+            child: InteractiveViewer(
+              minScale: 0.8,
+              maxScale: 4,
+              child: Image.network(
+                url,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.broken_image,
+                  color: Colors.white,
+                  size: 80,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _irParaPagina(int index, int total) {
+    if (index < 0 || index >= total) return;
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  // ----------------------------------------------------------
+  // BUILD
+  // ----------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     final args =
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
 
-    // ⚠️ ID do pet vindo da lista
     final petId = args['id'] ?? args['petId'];
 
     if (petId == null) {
@@ -39,6 +112,9 @@ class AdotarDetalhes extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF7E6),
 
+      // ----------------------------------------------------------
+      // APPBAR
+      // ----------------------------------------------------------
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(115),
         child: AppBar(
@@ -49,16 +125,14 @@ class AdotarDetalhes extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Color(0xFFDC004E)),
+                    icon:
+                        const Icon(Icons.arrow_back, color: Color(0xFFDC004E)),
                     onPressed: () => Navigator.pop(context),
                   ),
-                  const SizedBox(width: 4),
                   const Expanded(
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -77,7 +151,6 @@ class AdotarDetalhes extends StatelessWidget {
                             fontFamily: 'Poppins',
                             fontSize: 13,
                             color: Color(0xFFFF5C00),
-                            height: 1.2,
                           ),
                         ),
                       ],
@@ -100,299 +173,430 @@ class AdotarDetalhes extends StatelessWidget {
         ),
       ),
 
-      body: SafeArea(
-        child: StreamBuilder<DocumentSnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('pets')
-              .doc(petId)
-              .snapshots(),
-          builder: (context, snapshot) {
-            // ⏳ Carregando...
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(color: Color(0xFFDC004E)),
-              );
-            }
+      // ----------------------------------------------------------
+      // BODY
+      // ----------------------------------------------------------
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('pets')
+            .doc(petId)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFFDC004E)),
+            );
+          }
 
-            // ❌ Erro
-            if (snapshot.hasError) {
-              return Center(
-                child: Text(
-                  'Erro ao carregar pet: ${snapshot.error}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red),
-                ),
-              );
-            }
+          if (snapshot.hasError) {
+            return Center(child: Text("Erro: ${snapshot.error}"));
+          }
 
-            // ❌ Não existe
-            if (!snapshot.hasData || !snapshot.data!.exists) {
-              return const Center(
-                child: Text(
-                  'Pet não encontrado.',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 16,
-                    color: Colors.black54,
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return const Center(child: Text("Pet não encontrado."));
+          }
+
+          final data = snapshot.data!.data() as Map<String, dynamic>;
+
+          // ----------------------------------------------------------
+          // DADOS DO PET
+          // ----------------------------------------------------------
+
+          final noName = data['noName'] == true;
+          final nome = noName ? "Pet sem nome" : (data['name'] ?? '');
+
+          int? ageYears =
+              data['ageYears'] is num ? data['ageYears'].toInt() : null;
+          int? ageMonths =
+              data['ageMonths'] is num ? data['ageMonths'].toInt() : null;
+          final idade = _formatarIdade(ageYears, ageMonths);
+
+          final cidade = data['city'] ?? 'Cidade não informada';
+          final estado = data['state'] ?? '';
+          final localizacao =
+              estado.isNotEmpty ? "$cidade • $estado" : cidade;
+
+          final especie = data['species'] ?? 'Não informada';
+          final genero = data['gender'] ?? 'Não informado';
+          final porte = data['size'] ?? 'Não informado';
+          final tipo = data['adType'] ?? 'Não informado';
+          final descricao =
+              data['description'] ?? 'Sem descrição disponível.';
+
+          final tutorName = data['tutorName'] ?? 'Nome não informado';
+          final telefoneTutor = data['contactPhone'] ?? "*****";
+
+          // ----------- Imagens -------------------
+          List<String> fotos = [];
+          final rawPhotos = data['photoUrls'];
+          if (rawPhotos is List) {
+            fotos = rawPhotos.whereType<String>().toList();
+          }
+
+          const placeholderUrl =
+              'https://cdn-icons-png.flaticon.com/512/194/194279.png';
+
+          final String imagemPrincipal =
+              fotos.isNotEmpty ? fotos.first : placeholderUrl;
+
+          // Garante que o índice atual não ultrapasse o total
+          if (fotos.isNotEmpty && _currentPage >= fotos.length) {
+            _currentPage = fotos.length - 1;
+          }
+
+          // Dados para a próxima tela
+          final petArgs = {
+            'id': petId,
+            'nome': nome,
+            'cidade': cidade,
+            'estado': estado,
+            'imagem': imagemPrincipal,
+            'descricao': descricao,
+            'adType': tipo,
+            'especie': especie,
+            'genero': genero,
+            'porte': porte,
+            'idade': idade,
+            'tutorId': data['tutorId'],
+            'tutorName': tutorName,
+          };
+
+          // ----------------------------------------------------------
+          // UI
+          // ----------------------------------------------------------
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0xFFD9D9D9),
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
                   ),
-                ),
-              );
-            }
+                ],
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // 🖼️ CARROSSEL DE IMAGENS COM SETAS + CONTADOR
+                  SizedBox(
+                    height: 250,
+                    child: fotos.isNotEmpty
+                        ? Stack(
+                            children: [
+                              PageView.builder(
+                                controller: _pageController,
+                                itemCount: fotos.length,
+                                onPageChanged: (index) {
+                                  setState(() {
+                                    _currentPage = index;
+                                  });
+                                },
+                                itemBuilder: (context, index) {
+                                  final url = fotos[index];
+                                  return GestureDetector(
+                                    onTap: () =>
+                                        _abrirImagemFull(context, url),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.network(
+                                        url,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        errorBuilder: (_, __, ___) =>
+                                            Container(
+                                          color: Colors.grey[300],
+                                          child: const Icon(
+                                            Icons.broken_image,
+                                            size: 70,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
 
-            final data = snapshot.data!.data() as Map<String, dynamic>;
+                              // ◀️ Seta esquerda
+                              if (fotos.length > 1)
+                                Positioned(
+                                  left: 8,
+                                  top: 0,
+                                  bottom: 0,
+                                  child: Center(
+                                    child: GestureDetector(
+                                      onTap: () => _irParaPagina(
+                                        _currentPage - 1,
+                                        fotos.length,
+                                      ),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.black45,
+                                        ),
+                                        padding: const EdgeInsets.all(6),
+                                        child: const Icon(
+                                          Icons.chevron_left,
+                                          color: Colors.white,
+                                          size: 26,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
 
-            // 🐶 Nome
-            final bool noName = data['noName'] == true;
-            final String nome = noName
-                ? 'Pet sem nome'
-                : (data['name'] ?? 'Pet sem nome').toString();
+                              // ▶️ Seta direita
+                              if (fotos.length > 1)
+                                Positioned(
+                                  right: 8,
+                                  top: 0,
+                                  bottom: 0,
+                                  child: Center(
+                                    child: GestureDetector(
+                                      onTap: () => _irParaPagina(
+                                        _currentPage + 1,
+                                        fotos.length,
+                                      ),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.black45,
+                                        ),
+                                        padding: const EdgeInsets.all(6),
+                                        child: const Icon(
+                                          Icons.chevron_right,
+                                          color: Colors.white,
+                                          size: 26,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
 
-            // 👶 Idade
-            int? ageYears;
-            int? ageMonths;
-            final ay = data['ageYears'];
-            final am = data['ageMonths'];
-            if (ay is int) {
-              ageYears = ay;
-            } else if (ay is num) {
-              ageYears = ay.toInt();
-            }
-            if (am is int) {
-              ageMonths = am;
-            } else if (am is num) {
-              ageMonths = am.toInt();
-            }
-            final idade = _formatarIdade(ageYears, ageMonths);
-
-            // 🌍 Localização
-            final cidade = (data['city'] ?? 'Cidade não informada').toString();
-            final estado = (data['state'] ?? '').toString();
-            final localizacao =
-                estado.isNotEmpty ? '$cidade • $estado' : cidade;
-
-            // 🐾 Outros campos
-            final especie = (data['species'] ?? 'Não informada').toString();
-            final genero = (data['gender'] ?? 'Não informado').toString();
-            final porte = (data['size'] ?? 'Não informado').toString();
-            final tipo = (data['adType'] ?? 'Não informado').toString();
-            final descricao =
-                (data['description'] ?? 'Sem descrição disponível.').toString();
-            final telefoneTutor =
-                (data['contactPhone'] ?? 'Não informado').toString();
-            final emailTutor =
-                (data['contactEmail'] ?? 'Não informado').toString();
-
-            // 📸 Imagem
-            String? imagem;
-            final photos = data['photoUrls'];
-            if (photos != null &&
-                photos is List &&
-                photos.isNotEmpty &&
-                photos.first != null &&
-                photos.first is String &&
-                (photos.first as String).trim().isNotEmpty) {
-              imagem = photos.first as String;
-            } else {
-              imagem =
-                  'https://cdn-icons-png.flaticon.com/512/194/194279.png'; // placeholder
-            }
-
-            // 🔁 Monta o map completo para passar pra tela de interesse
-            final petArgs = <String, dynamic>{
-              'id': petId,
-              'nome': nome,
-              'idade': idade,
-              'cidade': cidade,
-              'estado': estado,
-              'imagem': imagem,
-              'descricao': descricao,
-              'adType': tipo,
-              'especie': especie,
-              'genero': genero,
-              'porte': porte,
-              'telefoneTutor': telefoneTutor,
-              'emailTutor': emailTutor,
-              'tutorId': data['tutorId'],
-            };
-
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0xFFD9D9D9),
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // 📸 FOTO PRINCIPAL
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        imagem,
-                        height: 250,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          height: 250,
-                          color: Colors.grey[300],
-                          child: const Icon(
-                            Icons.pets,
-                            size: 70,
-                            color: Colors.white,
+                              // 📍 Indicador "1/3" no canto inferior direito
+                              if (fotos.length > 1)
+                                Positioned(
+                                  bottom: 10,
+                                  right: 12,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black54,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      '${_currentPage + 1}/${fotos.length}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          )
+                        : ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              placeholderUrl,
+                              height: 250,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
                           ),
-                        ),
+                  ),
+
+                  // 🖼️ THUMBNAILS ABAIXO DO CARROSSEL
+                  if (fotos.length > 1) ...[
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 70,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: fotos.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(width: 8),
+                        itemBuilder: (context, index) {
+                          final thumbUrl = fotos[index];
+                          final bool isActive = index == _currentPage;
+
+                          return GestureDetector(
+                            onTap: () {
+                              _irParaPagina(index, fotos.length);
+                            },
+                            child: Container(
+                              width: 70,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isActive
+                                      ? const Color(0xFFDC004E)
+                                      : Colors.grey.shade300,
+                                  width: isActive ? 2 : 1,
+                                ),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(7),
+                                child: Image.network(
+                                  thumbUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    color: Colors.grey[300],
+                                    child: const Icon(
+                                      Icons.broken_image,
+                                      size: 24,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
+                  ],
 
-                    const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-                    // 🐶 NOME
-                    Text(
-                      nome,
-                      style: const TextStyle(
+                  Text(
+                    nome,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFDC004E),
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  Text(
+                    "$idade • $localizacao",
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "Informações Gerais",
+                      style: TextStyle(
                         fontFamily: 'Poppins',
-                        fontSize: 22,
                         fontWeight: FontWeight.bold,
+                        fontSize: 16,
                         color: Color(0xFFDC004E),
                       ),
                     ),
+                  ),
+                  const Divider(color: Color(0xFFDC004E)),
+                  const SizedBox(height: 8),
 
-                    const SizedBox(height: 6),
+                  _infoRow("Espécie", especie),
+                  _infoRow("Sexo", genero),
+                  _infoRow("Porte", porte),
+                  _infoRow("Tipo de anúncio", tipo),
+                  _infoRow("Localização", localizacao),
 
-                    // 👶 Idade + cidade
-                    Text(
-                      '$idade • $localizacao',
+                  const SizedBox(height: 20),
+
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "Informações do Anunciante",
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Color(0xFFDC004E),
+                      ),
+                    ),
+                  ),
+                  const Divider(color: Color(0xFFDC004E)),
+                  const SizedBox(height: 8),
+
+                  _infoRow("Anunciante", tutorName),
+                  _infoRow("Telefone", mascararTelefone(telefoneTutor)),
+
+                  const SizedBox(height: 20),
+
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "Descrição",
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Color(0xFFDC004E),
+                      ),
+                    ),
+                  ),
+                  const Divider(color: Color(0xFFDC004E)),
+                  const SizedBox(height: 6),
+
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      descricao,
                       style: const TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 14,
-                        color: Colors.black87,
+                        height: 1.4,
                       ),
                     ),
+                  ),
 
-                    const SizedBox(height: 20),
+                  const SizedBox(height: 30),
 
-                    // 🔹 Informações Gerais
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Informações Gerais',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Color(0xFFDC004E),
-                        ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFDC004E),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 40, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    const Divider(color: Color(0xFFDC004E)),
-                    const SizedBox(height: 8),
-
-                    _infoRow('Espécie', especie),
-                    _infoRow('Sexo', genero),
-                    _infoRow('Porte', porte),
-                    _infoRow('Tipo de anúncio', tipo),
-                    _infoRow('Localização', localizacao),
-
-                    const SizedBox(height: 20),
-
-                    // 📞 Contato do tutor
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Contato do Tutor',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Color(0xFFDC004E),
-                        ),
+                    onPressed: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/adotar_interesse',
+                        arguments: petArgs,
+                      );
+                    },
+                    child: const Text(
+                      'Quero Adotar',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const Divider(color: Color(0xFFDC004E)),
-                    const SizedBox(height: 8),
-
-                    _infoRow('Telefone', telefoneTutor),
-                    _infoRow('E-mail', emailTutor),
-
-                    const SizedBox(height: 20),
-
-                    // 📝 Descrição
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Descrição',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Color(0xFFDC004E),
-                        ),
-                      ),
-                    ),
-                    const Divider(color: Color(0xFFDC004E)),
-                    const SizedBox(height: 6),
-
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        descricao,
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 14,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // ❤️ BOTÃO "QUERO ADOTAR"
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFDC004E),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 40, vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/adotar_interesse',
-                          arguments: petArgs,
-                        );
-                      },
-                      child: const Text(
-                        'Quero Adotar',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 16,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 
+  // Widget auxiliar de linha informativa
   Widget _infoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -401,7 +605,7 @@ class AdotarDetalhes extends StatelessWidget {
           SizedBox(
             width: 150,
             child: Text(
-              '$label:',
+              "$label:",
               style: const TextStyle(
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.bold,

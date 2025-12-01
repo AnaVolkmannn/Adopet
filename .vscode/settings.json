@@ -1,3 +1,4 @@
 {
-  "DockerRun.DisableAutoGenerateConfig": true
+  "DockerRun.DisableAutoGenerateConfig": true,
+  "cmake.sourceDirectory": "D:/PROJETO APP/Adopet/linux"
 }

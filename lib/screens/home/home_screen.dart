@@ -11,17 +11,16 @@ class HomeScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.background,
-        elevation: 0,
+        elevation: 10,
         automaticallyImplyLeading: false,
-        titleSpacing: 0,
+        titleSpacing: 10,
         title: Padding(
-          padding: const EdgeInsets.only(left: 20),
+          padding: const EdgeInsets.only(left: 0, top: 15, bottom: 0),
           child: Row(
             children: [
               Image.asset(
                 'assets/images/logo.png',
-                height:
-                    110, // 🔹 logo bem maior sem aumentar a altura do AppBar
+                height: 50,
                 fit: BoxFit.contain,
               ),
             ],
@@ -37,73 +36,91 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
 
-      // ✅ Menu lateral reutilizável
+      // 📌 Menu lateral reutilizável
       endDrawer: const CustomDrawer(),
 
-      // 🔹 Corpo principal
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 10),
+      // 🌟 Corpo com dog no rodapé
+      body: Stack(
+        children: [
+          // ⭐ Conteúdo principal scrollável
+          SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 38, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 50),
 
-            // 🩷 Título
-            const Text(
-              'Divulgue pets para adoção',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFDC004E),
-                height: 1.2,
-              ),
+                // 🩷 Título
+                const Text(
+                  'Divulgue pets para adoção',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFDC004E),
+                    height: 1.2,
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // 🧡 Subtexto
+                const Text(
+                  'Ajude um pet a encontrar um lar! 💕\n'
+                  'Use nossa ferramenta de divulgação, já testada em todo o Brasil,\n'
+                  'e acompanhe cada passo no Painel de Adoção.',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 16,
+                    color: Color(0xFFFF5C00),
+                    height: 1.5,
+                  ),
+                ),
+
+                const SizedBox(height: 35),
+
+                // 🐾 Botão "Divulgar um pet"
+                _buildMainButton(
+                  context,
+                  title: 'Divulgar um pet',
+                  subtitle: 'Encontre um lar para o pet',
+                  icon: Icons.pets,
+                  gradient: const [Color(0xFFDC004E), Color(0xFFFF5C00)],
+                  textColor: Colors.white,
+                  onTap: () => Navigator.pushNamed(context, '/divulgar1'),
+                ),
+
+                const SizedBox(height: 20),
+
+                // ❤️ Botão "Adotar um pet"
+                _buildMainButton(
+                  context,
+                  title: 'Adotar um pet',
+                  subtitle: 'Veja pets disponíveis para adoção',
+                  icon: Icons.favorite,
+                  gradient: const [Color(0xFFFFE6EC), Color(0xFFFFE6EC)],
+                  textColor: const Color(0xFFDC004E),
+                  onTap: () => Navigator.pushNamed(context, '/adotar_home'),
+                ),
+
+                const SizedBox(height: 120), 
+                // espaço para que o dog não cubra conteúdo
+              ],
             ),
+          ),
 
-            const SizedBox(height: 16),
-
-            // 🧡 Subtexto
-            const Text(
-              'Ajude um pet a encontrar um lar! 💕\n'
-              'Use nossa ferramenta de divulgação, já testada em todo o Brasil,\n'
-              'e acompanhe cada passo no Painel de Adoção.',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 16,
-                color: Color(0xFFFF5C00),
-                height: 1.5,
-              ),
+          // 🐶 Imagem fixa no rodapé
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Image.asset(
+              'assets/images/dog.png',
+              fit: BoxFit.contain,
+              height: 0, // ajuste se quiser maior/menor
             ),
-
-            const SizedBox(height: 35),
-
-            // 🐾 Botão "Divulgar um pet"
-            _buildMainButton(
-              context,
-              title: 'Divulgar um pet',
-              subtitle: 'Encontre um lar para o pet',
-              icon: Icons.pets,
-              gradient: const [Color(0xFFDC004E), Color(0xFFFF5C00)],
-              textColor: Colors.white,
-              onTap: () => Navigator.pushNamed(context, '/divulgar1'),
-            ),
-
-            const SizedBox(height: 20),
-
-            // 🧡 Botão "Adotar um pet"
-            _buildMainButton(
-              context,
-              title: 'Adotar um pet',
-              subtitle: 'Veja pets disponíveis para adoção',
-              icon: Icons.favorite,
-              gradient: const [Color(0xFFFFE6EC), Color(0xFFFFE6EC)],
-              textColor: const Color(0xFFDC004E),
-              onTap: () => Navigator.pushNamed(context, '/adotar_home'),
-            ),
-
-            const SizedBox(height: 80),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

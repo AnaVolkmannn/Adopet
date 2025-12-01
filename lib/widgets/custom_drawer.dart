@@ -39,110 +39,111 @@ class CustomDrawer extends StatelessWidget {
             ),
           ),
           child: SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 30),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 🔹 Cabeçalho
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFDC004E),
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(20),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const CircleAvatar(
-                            radius: 26,
-                            backgroundColor: Colors.white,
-                            child: Icon(
-                              Icons.person,
-                              color: Color(0xFFDC004E),
-                              size: 30,
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 🔹 CABEÇALHO
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFDC004E),
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(20),
                             ),
                           ),
-                          const SizedBox(width: 15),
+                          child: Row(
+                            children: [
+                              const CircleAvatar(
+                                radius: 26,
+                                backgroundColor: Colors.white,
+                                child: Icon(
+                                  Icons.person,
+                                  color: Color(0xFFDC004E),
+                                  size: 30,
+                                ),
+                              ),
+                              const SizedBox(width: 15),
 
-                          // 🔥 NOVO: nome dinâmico do usuário
-                         Text(
-                            'Olá,\n$nomeUsuario!',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontFamily: 'Poppins',
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              height: 1.2, // deixa mais juntinho
-                            ),
+                              Text(
+                                'Olá,\n$nomeUsuario!',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontFamily: 'Poppins',
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  height: 1.2,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.campaign,
-                      label: 'Meus anúncios',
-                      onTap: () =>
-                          Navigator.pushNamed(context, '/meus_anuncios'),
-                    ),
-
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.pets,
-                      label: 'Adotar um Pet',
-                      onTap: () => Navigator.pushNamed(context, '/adotar_home'),
-                    ),
-
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.add_circle_outline,
-                      label: 'Criar anúncio',
-                      onTap: () => Navigator.pushNamed(context, '/divulgar1'),
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    const Divider(
-                      thickness: 2,
-                      color: Color(0xFFDC004E),
-                      indent: 16,
-                      endIndent: 16,
-                    ),
-
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.logout,
-                      label: 'Sair',
-                      onTap: () => Navigator.pushNamedAndRemoveUntil(
-                        context,
-                        '/login',
-                        (route) => false,
-                      ),
-                    ),
-
-                    const Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Text(
-                        '🐾 Adopet v1.0',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 13,
-                          color: Color(0xFFDC004E),
-                          fontWeight: FontWeight.w500,
                         ),
-                      ),
+
+                        const SizedBox(height: 20),
+
+                        _buildMenuItem(
+                          context,
+                          icon: Icons.campaign,
+                          label: 'Meus anúncios',
+                          onTap: () => Navigator.pushNamed(context, '/meus_anuncios'),
+                        ),
+                        _buildMenuItem(
+                          context,
+                          icon: Icons.pets,
+                          label: 'Adotar um Pet',
+                          onTap: () => Navigator.pushNamed(context, '/adotar_home'),
+                        ),
+                        _buildMenuItem(
+                          context,
+                          icon: Icons.add_circle_outline,
+                          label: 'Criar anúncio',
+                          onTap: () => Navigator.pushNamed(context, '/divulgar1'),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+
+                // --------------------------------------------------------
+                // 🚨 BOTÃO SAIR FIXO AO RODAPÉ
+                // --------------------------------------------------------
+
+                const Divider(
+                  thickness: 2,
+                  color: Color(0xFFDC004E),
+                  indent: 16,
+                  endIndent: 16,
+                ),
+
+                _buildMenuItem(
+                  context,
+                  icon: Icons.logout,
+                  label: 'Sair',
+                  onTap: () => Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/login',
+                    (route) => false,
+                  ),
+                ),
+
+                const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text(
+                    '🐾 Adopet v2.2',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 13,
+                      color: Color(0xFFDC004E),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

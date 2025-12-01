@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../widgets/anuncio_base_screen.dart';
@@ -14,27 +13,22 @@ class DivulgarPet02 extends StatefulWidget {
 
 class _DivulgarPet02State extends State<DivulgarPet02> {
   String? _tipoSituacao;
-  String? _estadoSelecionado; // UF (ex: "SC")
+  String? _estadoSelecionado;
   String? _cidadeSelecionada;
 
   final TextEditingController descricaoController = TextEditingController();
   final TextEditingController dataController = TextEditingController();
 
-  // Dados vindos da tela 1 (e possivelmente do anúncio já existente)
   Map<String, dynamic>? _petData;
-
-  // Modo edição/criação
   bool _isEdit = false;
   bool _initialized = false;
 
-  // Estados e cidades vindos da API do IBGE
-  List<Map<String, String>> _estados = []; // [{sigla: 'SC', nome: 'Santa Catarina'}]
+  List<Map<String, String>> _estados = [];
   List<String> _cidades = [];
 
   bool _loadingEstados = false;
   bool _loadingCidades = false;
 
-  // Valores iniciais (para modo edição)
   String? _ufInicial;
   String? _cidadeInicial;
 
@@ -42,56 +36,93 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
   void initState() {
     super.initState();
     _carregarEstados();
+
+    // Mascara de data
+    dataController.addListener(_formatarData);
+  }
+
+  @override
+  void dispose() {
+    dataController.removeListener(_formatarData);
+    dataController.dispose();
+    descricaoController.dispose();
+    super.dispose();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-
     if (_initialized) return;
 
-    // Pega os argumentos enviados pela Tela 1
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is Map<String, dynamic>) {
       _petData = Map<String, dynamic>.from(args);
       _isEdit = (_petData?['mode'] == 'edit');
 
-      // Preenche campos em modo edição
       if (_isEdit) {
-        _tipoSituacao = _petData?['adType'] as String?;
+        _tipoSituacao = _petData?['adType'];
 
         final desc = _petData?['description'];
         if (desc is String && desc.trim().isNotEmpty) {
           descricaoController.text = desc;
         }
 
-        final foundDate = _petData?['foundDate'];
-        if (foundDate is String && foundDate.trim().isNotEmpty) {
-          dataController.text = foundDate;
+        final date = _petData?['foundDate'];
+        if (date is String && date.trim().isNotEmpty) {
+          dataController.text = date;
         }
 
-        _ufInicial = _petData?['state'] as String?;
-        _cidadeInicial = _petData?['city'] as String?;
+        _ufInicial = _petData?['state'];
+        _cidadeInicial = _petData?['city'];
       }
     }
 
     _initialized = true;
-    // Se os estados já tiverem carregado, tenta aplicar UF/cidade aqui
     _aplicarEstadoCidadeSePossivel();
   }
 
-  @override
-  void dispose() {
-    descricaoController.dispose();
-    dataController.dispose();
-    super.dispose();
+  // ---------------------------------------------------------
+  // MÁSCARA PARA DATA: dd/mm/aaaa
+  // ---------------------------------------------------------
+  void _formatarData() {
+    String text = dataController.text;
+    text = text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (text.length > 8) {
+      text = text.substring(0, 8);
+    }
+
+    String formatted = "";
+
+    if (text.length >= 2) {
+      formatted = text.substring(0, 2) + "/";
+    } else if (text.length >= 1) {
+      formatted = text;
+    }
+
+    if (text.length >= 4) {
+      formatted += text.substring(2, 4) + "/";
+    } else if (text.length > 2) {
+      formatted += text.substring(2);
+    }
+
+    if (text.length > 4) {
+      formatted += text.substring(4);
+    }
+
+    if (formatted != dataController.text) {
+      dataController.value = TextEditingValue(
+        text: formatted,
+        selection: TextSelection.collapsed(offset: formatted.length),
+      );
+    }
   }
 
-  // ---------------- API IBGE: ESTADOS ----------------
+  // ---------------------------------------------------------
+  // CARREGAR ESTADOS
+  // ---------------------------------------------------------
   Future<void> _carregarEstados() async {
-    setState(() {
-      _loadingEstados = true;
-    });
+    setState(() => _loadingEstados = true);
 
     try {
       final uri = Uri.parse(
@@ -103,30 +134,23 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
         final List<dynamic> data = jsonDecode(response.body);
         _estados = data
             .map((e) => {
-                  'sigla': (e['sigla'] ?? '').toString(),
-                  'nome': (e['nome'] ?? '').toString(),
+                  'sigla': e['sigla'].toString(),
+                  'nome': e['nome'].toString(),
                 })
-            .where((e) => e['sigla']!.isNotEmpty && e['nome']!.isNotEmpty)
-            .cast<Map<String, String>>()
             .toList();
 
-        // Depois de carregar os estados, tenta aplicar UF/cidade inicial (modo edição)
         _aplicarEstadoCidadeSePossivel();
-      } else {
-        // Se quiser, você pode mostrar um SnackBar aqui também
       }
-    } catch (_) {
-      // Ignora erro silenciosamente ou exibe algo se quiser
-    } finally {
+    } catch (_) {} finally {
       if (mounted) {
-        setState(() {
-          _loadingEstados = false;
-        });
+        setState(() => _loadingEstados = false);
       }
     }
   }
 
-  // ---------------- API IBGE: CIDADES ----------------
+  // ---------------------------------------------------------
+  // CARREGAR CIDADES
+  // ---------------------------------------------------------
   Future<void> _carregarCidades(String uf, {String? cidadeInicial}) async {
     setState(() {
       _loadingCidades = true;
@@ -142,103 +166,99 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        _cidades = data
-            .map((e) => (e['nome'] ?? '').toString())
-            .where((nome) => nome.isNotEmpty)
-            .cast<String>()
-            .toList();
+        _cidades = data.map((e) => e['nome'].toString()).toList();
 
         if (cidadeInicial != null && _cidades.contains(cidadeInicial)) {
           _cidadeSelecionada = cidadeInicial;
         }
       }
-    } catch (_) {
-      // opcional: tratar erro
-    } finally {
+    } catch (_) {} finally {
       if (mounted) {
-        setState(() {
-          _loadingCidades = false;
-        });
+        setState(() => _loadingCidades = false);
       }
     }
   }
 
-  // Tenta aplicar UF e cidade inicial (quando modo edição)
   void _aplicarEstadoCidadeSePossivel() {
-    if (!_isEdit) return;
-    if (_ufInicial == null) return;
-    if (_estados.isEmpty) return;
+    if (!_isEdit || _ufInicial == null || _estados.isEmpty) return;
 
     final uf = _ufInicial!;
-    final existeUf = _estados.any((e) => e['sigla'] == uf);
-    if (!existeUf) return;
-
-    // Define o estado selecionado e carrega cidades a partir da UF
-    _estadoSelecionado = uf;
-
-    // Chama carregamento de cidades com cidade inicial (se houver)
-    _carregarCidades(uf, cidadeInicial: _cidadeInicial);
+    if (_estados.any((e) => e['sigla'] == uf)) {
+      _estadoSelecionado = uf;
+      _carregarCidades(uf, cidadeInicial: _cidadeInicial);
+    }
   }
 
-  // ---------------- VALIDAÇÃO + PRÓXIMO PASSO ----------------
-  void _proximoPasso() {
-    if (_petData == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Ocorreu um erro ao carregar os dados do pet. Volte e tente novamente.',
-          ),
-          backgroundColor: Color(0xFFDC004E),
-        ),
-      );
-      return;
-    }
+  // ---------------------------------------------------------
+  // VALIDA DATA
+  // ---------------------------------------------------------
+  bool _validarData(String data) {
+    if (data.isEmpty) return true; // opcional
 
+    final partes = data.split("/");
+
+    if (partes.length != 3) return false;
+
+    final dia = int.tryParse(partes[0]);
+    final mes = int.tryParse(partes[1]);
+    final ano = int.tryParse(partes[2]);
+
+    if (dia == null || mes == null || ano == null) return false;
+    if (dia < 1 || dia > 31) return false;
+    if (mes < 1 || mes > 12) return false;
+    if (ano < 1900) return false;
+
+    try {
+      final dt = DateTime(ano, mes, dia);
+      return dt.day == dia && dt.month == mes && dt.year == ano;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ---------------------------------------------------------
+  // BOTÃO AVANÇAR
+  // ---------------------------------------------------------
+  void _proximoPasso() {
     if (_tipoSituacao == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Escolha o tipo de anúncio: doar ou encontrado.'),
-          backgroundColor: Color(0xFFDC004E),
-        ),
-      );
-      return;
+      return _erro("Escolha o tipo de anúncio.");
     }
 
     if (_estadoSelecionado == null || _cidadeSelecionada == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Selecione o estado e a cidade.'),
-          backgroundColor: Color(0xFFDC004E),
-        ),
-      );
-      return;
+      return _erro("Selecione o estado e a cidade.");
     }
 
-    // Monta o mapa com os dados da tela 2
-    final Map<String, dynamic> updatedPetData = {
-      ..._petData!, // todos os dados das telas anteriores (e do anúncio, se edição)
+    if (!_validarData(dataController.text.trim())) {
+      return _erro("Digite uma data válida no formato dd/mm/aaaa.");
+    }
 
-      // mantém o modo
-      'mode': _isEdit ? 'edit' : (_petData?['mode'] ?? 'create'),
-
-      // sobrescreve campos da tela 2
-      'adType': _tipoSituacao, // "Doacao" ou "Achado"
-      'state': _estadoSelecionado, // UF
-      'city': _cidadeSelecionada,  // nome da cidade
+    final updatedData = {
+      ..._petData!,
+      'mode': _isEdit ? 'edit' : 'create',
+      'adType': _tipoSituacao,
+      'state': _estadoSelecionado,
+      'city': _cidadeSelecionada,
       'description': descricaoController.text.trim(),
       'foundDate': dataController.text.trim().isEmpty
           ? null
-          : dataController.text.trim(), // por enquanto String
+          : dataController.text.trim(),
     };
 
-    // Envia para a tela 3
-    Navigator.pushNamed(
-      context,
-      '/divulgar3',
-      arguments: updatedPetData,
+    Navigator.pushNamed(context, '/divulgar3', arguments: updatedData);
+  }
+
+  void _erro(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: const Color(0xFFDC004E),
+      ),
     );
   }
 
+  // ---------------------------------------------------------
+  // BUILD
+  // ---------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     return AnuncioBaseScreen(
@@ -252,70 +272,38 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Tipo de anúncio',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFFDC004E),
-              ),
-            ),
+            const Text('Tipo de anúncio', style: _labelStyle),
             const SizedBox(height: 10),
 
             DropdownButtonFormField<String>(
               isExpanded: true,
               value: _tipoSituacao,
-              decoration: _decoracaoCampo(),
-              hint: const Text('Selecione o tipo de anúncio'),
+              decoration: _decoracaoAdopet("Selecione o tipo de anúncio"),
+              dropdownColor: const Color(0xFFFFE6EC),
               items: const [
-                DropdownMenuItem(
-                  value: 'Doacao',
-                  child: Text('Quero doar um pet meu'),
-                ),
-                DropdownMenuItem(
-                  value: 'Achado',
-                  child: Text('Encontrei um pet perdido'),
-                ),
+                DropdownMenuItem(value: 'Doacao', child: Text('Quero doar um pet meu')),
+                DropdownMenuItem(value: 'Achado', child: Text('Encontrei um pet perdido')),
               ],
               onChanged: (v) => setState(() => _tipoSituacao = v),
             ),
 
             const SizedBox(height: 25),
 
-            const Text(
-              'Localização do pet',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFFDC004E),
-              ),
-            ),
+            const Text('Localização do pet', style: _labelStyle),
             const SizedBox(height: 10),
 
-            // 🔽 Estado
             _loadingEstados
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8.0),
-                      child: CircularProgressIndicator(
-                        color: Color(0xFFDC004E),
-                      ),
-                    ),
-                  )
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFFDC004E)))
                 : DropdownButtonFormField<String>(
-                    isExpanded: true,
                     value: _estadoSelecionado,
-                    decoration: _decoracaoCampo(),
-                    hint: const Text('Selecione o estado'),
+                    isExpanded: true,
+                    decoration: _decoracaoAdopet("Selecione o estado"),
+                    dropdownColor: const Color(0xFFFFE6EC),
                     items: _estados
                         .map(
-                          (estado) => DropdownMenuItem(
-                            value: estado['sigla'],
-                            child: Text(
-                              '${estado['sigla']} - ${estado['nome']}',
-                            ),
+                          (e) => DropdownMenuItem(
+                            value: e['sigla'],
+                            child: Text("${e['sigla']} - ${e['nome']}"),
                           ),
                         )
                         .toList(),
@@ -324,64 +312,79 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
                       setState(() {
                         _estadoSelecionado = v;
                         _cidadeSelecionada = null;
-                        _cidades = [];
                       });
                       _carregarCidades(v);
                     },
                   ),
+
             const SizedBox(height: 15),
 
-            // 🔽 Cidade
             if (_estadoSelecionado != null)
               _loadingCidades
-                  ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8.0),
-                        child: CircularProgressIndicator(
-                          color: Color(0xFFDC004E),
-                        ),
-                      ),
-                    )
+                  ? const Center(child: CircularProgressIndicator(color: Color(0xFFDC004E)))
                   : DropdownButtonFormField<String>(
-                      isExpanded: true,
                       value: _cidadeSelecionada,
-                      decoration: _decoracaoCampo(),
-                      hint: const Text('Selecione a cidade'),
+                      isExpanded: true,
+                      decoration: _decoracaoAdopet("Selecione a cidade"),
+                      dropdownColor: const Color(0xFFFFE6EC),
                       items: _cidades
-                          .map(
-                            (c) => DropdownMenuItem(
-                              value: c,
-                              child: Text(c),
-                            ),
-                          )
+                          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                           .toList(),
-                      onChanged: (v) =>
-                          setState(() => _cidadeSelecionada = v),
+                      onChanged: (v) => setState(() => _cidadeSelecionada = v),
                     ),
 
             const SizedBox(height: 20),
 
             CustomInput(
-              label: 'Descrição do pet e da situação',
-              hint:
-                  'Conte detalhes sobre o pet e o motivo do anúncio (ex: estou de mudança, encontrei assustado na rua...)',
+              label: "Descrição do pet e da situação",
+              hint: "Conte detalhes sobre o pet e o motivo do anúncio...",
               controller: descricaoController,
               maxLines: 3,
             ),
-            const SizedBox(height: 15),
+
+            const SizedBox(height: 20),
+
+            CustomInput(
+              label: "Data em que encontrou o pet (opcional)",
+              hint: "dd/mm/aaaa",
+              controller: dataController,
+              keyboardType: TextInputType.number,
+            ),
+
+            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
 
-  InputDecoration _decoracaoCampo() {
+  // ---------------------------------------------------------
+  // ESTILOS
+  // ---------------------------------------------------------
+
+  static const _labelStyle = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 16,
+    color: Color(0xFFDC004E),
+    fontWeight: FontWeight.w600,
+  );
+
+  static InputDecoration _decoracaoAdopet(String hint) {
     return InputDecoration(
       filled: true,
-      fillColor: const Color(0xFFFFF7E6),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
-        borderSide: const BorderSide(color: Color(0xFFDC004E)),
+      fillColor: const Color(0xFFFFE6EC),
+      hintText: hint,
+      hintStyle: const TextStyle(
+        color: Colors.black38,
+        fontFamily: 'Poppins',
+      ),
+      border: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(15)),
+        borderSide: BorderSide.none,
+      ),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 14,
       ),
     );
   }

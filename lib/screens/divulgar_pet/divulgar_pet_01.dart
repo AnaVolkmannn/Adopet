@@ -32,7 +32,7 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
   final List<String> generos = ['Macho', 'Fêmea'];
   final List<String> portes = ['Pequeno', 'Médio', 'Grande'];
 
-  // 🔹 CONTROLE DE EDIÇÃO
+  // CONTROLE DE EDIÇÃO
   bool _isEdit = false;
   Map<String, dynamic>? _originalData;
   bool _initialized = false;
@@ -48,7 +48,6 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
       _isEdit = (_originalData?['mode'] == 'edit');
 
       if (_isEdit) {
-        // Preenche campos com dados do anúncio existente
         petSemNome = _originalData?['noName'] ?? false;
 
         if (!petSemNome) {
@@ -62,14 +61,8 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
         final ageYears = _originalData?['ageYears'];
         final ageMonths = _originalData?['ageMonths'];
 
-        if (ageYears != null) {
-          idadeAnosController.text = ageYears.toString();
-        }
-        if (ageMonths != null) {
-          idadeMesesController.text = ageMonths.toString();
-        }
-
-        // Fotos: se quiser tratar edição de fotos depois, aqui é o lugar :)
+        if (ageYears != null) idadeAnosController.text = ageYears.toString();
+        if (ageMonths != null) idadeMesesController.text = ageMonths.toString();
       }
     }
 
@@ -84,7 +77,7 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
     super.dispose();
   }
 
-  // 📸 Selecionar imagem
+  // Selecionar imagem
   Future<void> _selecionarImagemUnica() async {
     if (fotosPetUnico.length >= 3) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -102,33 +95,26 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
     }
   }
 
-  // 🚀 VALIDAÇÃO + ENVIO DOS DADOS PARA A TELA 2
+  // Prosseguir
   void _prosseguir() {
-    // Validação dos campos obrigatórios básicos
     if ((!petSemNome && nomeController.text.isEmpty) ||
         especieSelecionada == null ||
         generoSelecionado == null ||
         porteSelecionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Preencha todos os campos obrigatórios antes de prosseguir.',
-          ),
+          content:
+              Text('Preencha todos os campos obrigatórios antes de prosseguir.'),
           backgroundColor: Color(0xFFDC004E),
         ),
       );
       return;
     }
 
-    // 🔹 Validação da idade (anos e meses)
-    final String anosText = idadeAnosController.text.trim();
-    final String mesesText = idadeMesesController.text.trim();
+    final anosText = idadeAnosController.text.trim();
+    final mesesText = idadeMesesController.text.trim();
 
-    final bool temAnos = anosText.isNotEmpty;
-    final bool temMeses = mesesText.isNotEmpty;
-
-    // Pelo menos um dos campos deve ser preenchido
-    if (!temAnos && !temMeses) {
+    if (anosText.isEmpty && mesesText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Informe a idade em anos e/ou meses.'),
@@ -141,7 +127,7 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
     int? ageYears;
     int? ageMonths;
 
-    if (temAnos) {
+    if (anosText.isNotEmpty) {
       ageYears = int.tryParse(anosText);
       if (ageYears == null || ageYears < 0 || ageYears >= 20) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -154,7 +140,7 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
       }
     }
 
-    if (temMeses) {
+    if (mesesText.isNotEmpty) {
       ageMonths = int.tryParse(mesesText);
       if (ageMonths == null || ageMonths <= 0 || ageMonths >= 12) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -167,15 +153,9 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
       }
     }
 
-    // 🔥 MONTA O MAP COM BASE NO QUE JÁ EXISTIA + O QUE FOI EDITADO/CRIADO AQUI
     final Map<String, dynamic> petData = {
-      // se estiver editando, preserva tudo que veio do anúncio (petId, adType, state, etc.)
       ...?_originalData,
-
-      // garante que o modo continua consistente
       'mode': _isEdit ? 'edit' : 'create',
-
-      // sobrescreve com os dados atuais da tela 1
       'name': petSemNome ? null : nomeController.text.trim(),
       'noName': petSemNome,
       'species': especieSelecionada,
@@ -183,17 +163,10 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
       'size': porteSelecionado,
       'ageYears': ageYears,
       'ageMonths': ageMonths,
-
-      // novas fotos (se o usuário adicionou agora)
       'photos': fotosPetUnico,
     };
 
-    // 👉 MANDANDO PARA A TELA 2
-    Navigator.pushNamed(
-      context,
-      '/divulgar2',
-      arguments: petData,
-    );
+    Navigator.pushNamed(context, '/divulgar2', arguments: petData);
   }
 
   @override
@@ -214,9 +187,9 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
     );
   }
 
-  // -------------------------------
-  // 🐶 PET ÚNICO
-  // -------------------------------
+  // -------------------------
+  // 🐶 PET ÚNICO — COMPLETO
+  // -------------------------
   Widget _buildPetUnico() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,65 +225,66 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
             ),
           ],
         ),
+
         const SizedBox(height: 20),
 
+        // ----------------------------
+        // DROPDOWN — ESPÉCIE
+        // ----------------------------
         const Text('Espécie', style: _labelStyle),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           value: especieSelecionada,
-          decoration: _decoracaoCampo(),
-          hint: const Text('Selecione a espécie'),
-          items: especies
-              .map(
-                (e) => DropdownMenuItem(
-                  value: e,
-                  child: Text(e),
-                ),
-              )
-              .toList(),
+          decoration: _decoracaoCampoAdopet("Selecione a espécie"),
+          dropdownColor: const Color(0xFFFFE6EC),
+          style: const TextStyle(fontFamily: 'Poppins', color: Colors.black87),
+          items:
+              especies.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
           onChanged: (v) => setState(() => especieSelecionada = v),
         ),
+
         const SizedBox(height: 20),
 
+        // ----------------------------
+        // DROPDOWN — GÊNERO
+        // ----------------------------
         const Text('Gênero', style: _labelStyle),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           value: generoSelecionado,
-          decoration: _decoracaoCampo(),
-          hint: const Text('Selecione o gênero'),
-          items: generos
-              .map(
-                (e) => DropdownMenuItem(
-                  value: e,
-                  child: Text(e),
-                ),
-              )
-              .toList(),
+          decoration: _decoracaoCampoAdopet("Selecione o gênero"),
+          dropdownColor: const Color(0xFFFFE6EC),
+          style: const TextStyle(fontFamily: 'Poppins', color: Colors.black87),
+          items:
+              generos.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
           onChanged: (v) => setState(() => generoSelecionado = v),
         ),
+
         const SizedBox(height: 20),
 
+        // ----------------------------
+        // DROPDOWN — PORTE
+        // ----------------------------
         const Text('Porte do pet', style: _labelStyle),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           value: porteSelecionado,
-          decoration: _decoracaoCampo(),
-          hint: const Text('Selecione o porte'),
-          items: portes
-              .map(
-                (e) => DropdownMenuItem(
-                  value: e,
-                  child: Text(e),
-                ),
-              )
-              .toList(),
+          decoration: _decoracaoCampoAdopet("Selecione o porte"),
+          dropdownColor: const Color(0xFFFFE6EC),
+          style: const TextStyle(fontFamily: 'Poppins', color: Colors.black87),
+          items:
+              portes.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
           onChanged: (v) => setState(() => porteSelecionado = v),
         ),
-        const SizedBox(height: 20),
 
-        // 📸 Fotos
+        const SizedBox(height: 25),
+
+        // ----------------------------
+        // FOTOS
+        // ----------------------------
         const Text('Fotos (até 3) — opcional', style: _labelStyle),
         const SizedBox(height: 10),
+
         Wrap(
           spacing: 10,
           runSpacing: 10,
@@ -336,67 +310,83 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
                         shape: BoxShape.circle,
                       ),
                       padding: const EdgeInsets.all(4),
-                      child: const Icon(
-                        Icons.close,
-                        color: Colors.white,
-                        size: 18,
-                      ),
+                      child: const Icon(Icons.close,
+                          color: Colors.white, size: 18),
                     ),
                   ),
                 ],
               ),
 
-            // 📸 Botão adicionar foto
-            GestureDetector(
-              onTap: _selecionarImagemUnica,
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: const Color(0xFFDC004E),
-                    width: 1.5,
+            // 👉 Só mostra o botão de adicionar se ainda tiver menos de 3 fotos
+            if (fotosPetUnico.length < 3)
+              GestureDetector(
+                onTap: _selecionarImagemUnica,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: const Color(0xFFDC004E),
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.add_a_photo,
-                  color: Color(0xFFDC004E),
+                  child: const Icon(Icons.add_a_photo, color: Color(0xFFDC004E)),
                 ),
               ),
-            ),
           ],
         ),
+
         const SizedBox(height: 25),
 
-        // Idade
+        // ----------------------------
+        // IDADE
+        // ----------------------------
         const Text('Idade do pet', style: _labelStyle),
         const SizedBox(height: 8),
+
         Row(
           children: [
             Expanded(
-              child: CustomInput(
-                label: 'Anos',
-                hint: 'Ex: 2',
-                controller: idadeAnosController,
-                keyboardType: TextInputType.number,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Anos', style: _labelStyle),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: idadeAnosController,
+                    keyboardType: TextInputType.number,
+                    decoration: _decoracaoCampoAdopet('Ex: 2'),
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: CustomInput(
-                label: 'Meses',
-                hint: 'Ex: 6',
-                controller: idadeMesesController,
-                keyboardType: TextInputType.number,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Meses', style: _labelStyle),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: idadeMesesController,
+                    keyboardType: TextInputType.number,
+                    decoration: _decoracaoCampoAdopet('Ex: 6'),
+                  ),
+                ],
               ),
             ),
           ],
         ),
+
         const SizedBox(height: 20),
       ],
     );
   }
+
+  // ----------------------------
+  // ESTILOS PADRONIZADOS
+  // ----------------------------
 
   static const _labelStyle = TextStyle(
     fontFamily: 'Poppins',
@@ -405,13 +395,25 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
     fontWeight: FontWeight.w600,
   );
 
-  InputDecoration _decoracaoCampo() {
-    return InputDecoration(
+  // INPUT IGUAL AO DA TELA DE LOGIN (rosa)
+  static InputDecoration _decoracaoCampoAdopet(String hint) {
+    return const InputDecoration(
       filled: true,
-      fillColor: const Color(0xFFFFF7E6),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
-        borderSide: const BorderSide(color: Color(0xFFDC004E)),
+      fillColor: Color(0xFFFFE6EC),
+      hintText: null, // vamos ajustar com copyWith abaixo
+    ).copyWith(
+      hintText: hint,
+      hintStyle: const TextStyle(
+        color: Colors.black38,
+        fontFamily: 'Poppins',
+      ),
+      border: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(15)),
+        borderSide: BorderSide.none,
+      ),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 14,
       ),
     );
   }

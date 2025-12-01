@@ -53,7 +53,6 @@ class MyApp extends StatelessWidget {
       routes: {
         // Se quiser ainda usar a splash em algum lugar:
         '/splash': (context) => const SplashScreen(),
-
         '/start': (context) => const StartScreen(),
         '/signup': (context) => const SignupScreen(),
         '/login': (context) => const LoginScreen(),
