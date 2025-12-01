@@ -12,16 +12,21 @@ class DivulgarPet03 extends StatefulWidget {
 class _DivulgarPet03State extends State<DivulgarPet03> {
   bool _declaracaoAceita = false;
 
-  // Dados vindos das telas 1 e 2 (e possivelmente do anúncio original)
   Map<String, dynamic>? _petData;
 
-  // Modo criação/edição
   bool _isEdit = false;
   bool _initialized = false;
 
-  // Controladores
   final TextEditingController telefoneController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+
+    // 🔹 adiciona a máscara ao telefone
+    telefoneController.addListener(_formatarTelefone);
+  }
 
   @override
   void didChangeDependencies() {
@@ -38,15 +43,13 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
         final phone = _petData?['contactPhone'];
         final email = _petData?['contactEmail'];
 
+        // já formata automaticamente
         if (phone is String && phone.trim().isNotEmpty) {
           telefoneController.text = phone;
         }
         if (email is String && email.trim().isNotEmpty) {
           emailController.text = email;
         }
-
-        // Se você quiser que na edição a declaração já venha marcada:
-        // _declaracaoAceita = true;
       }
     }
 
@@ -55,9 +58,44 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
 
   @override
   void dispose() {
+    telefoneController.removeListener(_formatarTelefone);
     telefoneController.dispose();
     emailController.dispose();
     super.dispose();
+  }
+
+  // ------------------------------------------------------------------
+  // 📱 FUNÇÃO DE FORMATAÇÃO DO TELEFONE -> (99) 99999-9999
+  // ------------------------------------------------------------------
+  void _formatarTelefone() {
+    String text = telefoneController.text;
+
+    // remove tudo que não for número
+    text = text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (text.length > 11) {
+      text = text.substring(0, 11);
+    }
+
+    String formatted = '';
+
+    if (text.length >= 1) formatted = '(${text.substring(0, 2)}';
+    if (text.length >= 2) formatted = '(${text.substring(0, 2)}) ';
+    if (text.length >= 3) formatted += text.substring(2, text.length);
+
+    if (text.length > 7) {
+      formatted =
+          '(${text.substring(0, 2)}) ${text.substring(2, 7)}-${text.substring(7)}';
+    }
+
+    // Evita loop infinito
+    if (formatted != telefoneController.text) {
+      final cursorPos = formatted.length;
+      telefoneController.value = TextEditingValue(
+        text: formatted,
+        selection: TextSelection.collapsed(offset: cursorPos),
+      );
+    }
   }
 
   // FINALIZAÇÃO
@@ -92,20 +130,14 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
       return;
     }
 
-    // 🔥 COMPLETA O MAPA COM OS DADOS DA TELA 3
     final Map<String, dynamic> finalPetData = {
-      ..._petData!, // dados das telas 1 e 2 (e do anúncio original, se edição)
-
-      // garante que o modo continua consistente
+      ..._petData!,
       'mode': _isEdit ? 'edit' : (_petData?['mode'] ?? 'create'),
-
       'contactPhone': telefoneController.text.trim(),
-      'contactEmail': emailController.text.trim().isEmpty
-          ? null
-          : emailController.text.trim(),
+      'contactEmail':
+          emailController.text.trim().isEmpty ? null : emailController.text.trim(),
     };
 
-    // 👉 manda para a tela de sucesso (que salva no Firestore)
     Navigator.pushNamed(
       context,
       '/success',
@@ -119,9 +151,8 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
       onBack: () => Navigator.pop(context),
       onNext: _proximoPasso,
       title: _isEdit ? 'Editar Anúncio' : 'Criar Anúncio',
-      subtitle: _isEdit
-          ? 'Atualize suas informações de contato'
-          : 'Insira suas informações de contato',
+      subtitle:
+          _isEdit ? 'Atualize suas informações de contato' : 'Insira suas informações de contato',
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,16 +177,6 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
             ),
             const SizedBox(height: 15),
 
-            CustomInput(
-              label: 'E-mail (opcional)',
-              hint: 'Digite seu e-mail de contato',
-              controller: emailController,
-              maxLines: 1,
-              keyboardType: TextInputType.emailAddress,
-            ),
-
-            const SizedBox(height: 25),
-
             const Divider(
               thickness: 2,
               color: Color.fromRGBO(220, 0, 78, 1),
@@ -165,14 +186,13 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
 
             const SizedBox(height: 25),
 
-            // DECLARAÇÃO
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: const Color(0xFFDC004E).withOpacity(0.4),
+                  color: Color(0xFFDC004E).withOpacity(0.4),
                   width: 1.5,
                 ),
                 color: const Color(0xFFFFE6EC),

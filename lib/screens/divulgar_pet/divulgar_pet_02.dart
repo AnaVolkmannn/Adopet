@@ -369,14 +369,6 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
               maxLines: 3,
             ),
             const SizedBox(height: 15),
-
-            CustomInput(
-              label: 'Data do encontro (pet perdido - opcional)',
-              hint: 'Ex: 10/05/2025',
-              controller: dataController,
-              maxLines: 1,
-              keyboardType: TextInputType.datetime,
-            ),
           ],
         ),
       ),

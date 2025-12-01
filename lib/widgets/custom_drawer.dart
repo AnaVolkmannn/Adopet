@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class CustomDrawer extends StatelessWidget {
   const CustomDrawer({super.key});
@@ -8,14 +9,28 @@ class CustomDrawer extends StatelessWidget {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
+    final user = FirebaseAuth.instance.currentUser;
+
+    // PEGA O NOME DO USUÁRIO
+    String nomeUsuario = 'Usuário';
+
+    if (user != null) {
+      if (user.displayName != null && user.displayName!.trim().isNotEmpty) {
+        nomeUsuario = user.displayName!;
+      } else if (user.email != null) {
+        nomeUsuario = user.email!.split('@').first;
+      } else {
+        nomeUsuario = user.uid.substring(0, 6);
+      }
+    }
+
     return Align(
       alignment: Alignment.centerRight,
       child: Material(
-        // ✅ importante: permite que cliques e sombras funcionem
         color: Colors.transparent,
         child: Container(
-          width: screenWidth * 0.75, // 75% da largura da tela
-          height: screenHeight, // altura exata da tela
+          width: screenWidth * 0.75,
+          height: screenHeight,
           decoration: const BoxDecoration(
             color: Color(0xFFFFF7E6),
             borderRadius: BorderRadius.only(
@@ -25,12 +40,9 @@ class CustomDrawer extends StatelessWidget {
           ),
           child: SafeArea(
             child: SingleChildScrollView(
-              // ✅ impede overflow
               physics: const BouncingScrollPhysics(),
               child: Padding(
-                padding: const EdgeInsets.only(
-                  bottom: 30,
-                ), // evita corte no fim
+                padding: const EdgeInsets.only(bottom: 30),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -44,9 +56,9 @@ class CustomDrawer extends StatelessWidget {
                           topLeft: Radius.circular(20),
                         ),
                       ),
-                      child: const Row(
+                      child: Row(
                         children: [
-                          CircleAvatar(
+                          const CircleAvatar(
                             radius: 26,
                             backgroundColor: Colors.white,
                             child: Icon(
@@ -55,14 +67,17 @@ class CustomDrawer extends StatelessWidget {
                               size: 30,
                             ),
                           ),
-                          SizedBox(width: 15),
-                          Text(
-                            'Olá!',
-                            style: TextStyle(
+                          const SizedBox(width: 15),
+
+                          // 🔥 NOVO: nome dinâmico do usuário
+                         Text(
+                            'Olá,\n$nomeUsuario!',
+                            style: const TextStyle(
                               color: Colors.white,
                               fontFamily: 'Poppins',
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
+                              height: 1.2, // deixa mais juntinho
                             ),
                           ),
                         ],
@@ -71,7 +86,6 @@ class CustomDrawer extends StatelessWidget {
 
                     const SizedBox(height: 20),
 
-                    // 🔹 Opções
                     _buildMenuItem(
                       context,
                       icon: Icons.campaign,

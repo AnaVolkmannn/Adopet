@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 Firestore
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme.dart';
 import '../../../core/spacing.dart';
 
@@ -13,6 +15,14 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _surnameController = TextEditingController();
+
+  final TextEditingController _cepController = TextEditingController();
+  final TextEditingController _stateController = TextEditingController();
+  final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _streetController = TextEditingController();
+  final TextEditingController _numberController = TextEditingController();
+
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
@@ -24,14 +34,98 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
+  // 🔹 NOVO — checkbox para consentimento
+  bool _privacyAccepted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cepController.addListener(_maskCepAndSearch);
+  }
+
+  void _maskCepAndSearch() {
+    String numeric = _cepController.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (numeric.length > 8) numeric = numeric.substring(0, 8);
+
+    String formatted = numeric.length >= 5
+        ? "${numeric.substring(0, 5)}-${numeric.substring(5)}"
+        : numeric;
+
+    if (formatted != _cepController.text) {
+      _cepController.value = TextEditingValue(
+        text: formatted,
+        selection: TextSelection.collapsed(offset: formatted.length),
+      );
+    }
+
+    if (numeric.length == 8) {
+      _fetchViaCep(formatted);
+    }
+  }
+
+  Future<void> _fetchViaCep(String cep) async {
+    final cleanedCep = cep.replaceAll('-', '');
+
+    try {
+      final response = await http
+          .get(Uri.parse("https://viacep.com.br/ws/$cleanedCep/json/"))
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data["erro"] == true) {
+          _showCepError("CEP não encontrado.");
+          return;
+        }
+
+        setState(() {
+          _stateController.text = data["uf"] ?? "";
+          _cityController.text = data["localidade"] ?? "";
+          _streetController.text = data["logradouro"] ?? "";
+        });
+      } else {
+        _showCepError("Erro ao consultar CEP.");
+      }
+    } catch (e) {
+      _showCepError("Não foi possível conectar ao ViaCEP.");
+    }
+  }
+
+  void _showCepError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.red,
+      ),
+    );
+
+    setState(() {
+      _stateController.clear();
+      _cityController.clear();
+      _streetController.clear();
+    });
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
+    _surnameController.dispose();
+    _cepController.dispose();
+    _stateController.dispose();
+    _cityController.dispose();
+    _streetController.dispose();
+    _numberController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
+
+  // ==============================================================
+  // ===================== 🔥 CRIAR CONTA =========================
+  // ==============================================================
 
   Future<void> _handleSignup() async {
     setState(() {
@@ -39,7 +133,6 @@ class _SignupScreenState extends State<SignupScreen> {
       _errorMessage = null;
     });
 
-    // 🔎 Validação local: senhas iguais
     if (_passwordController.text != _confirmPasswordController.text) {
       setState(() {
         _errorMessage = "As senhas não coincidem.";
@@ -48,8 +141,19 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
+    // ⚠️ NOVO — Validação do checkbox
+    if (!_privacyAccepted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Você deve concordar em compartilhar suas informações."),
+          backgroundColor: Colors.red,
+        ),
+      );
+      setState(() => _isLoading = false);
+      return;
+    }
+
     try {
-      // 1️⃣ Cria o usuário no Firebase Auth
       final userCredential =
           await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
@@ -57,59 +161,50 @@ class _SignupScreenState extends State<SignupScreen> {
       );
 
       final user = userCredential.user;
-      if (user == null) {
-        throw Exception('Usuário nulo após criação.');
-      }
+      if (user == null) throw Exception("Erro inesperado.");
 
-      // Atualiza o displayName no Auth (opcional mas legal)
       await user.updateDisplayName(_nameController.text.trim());
 
-      // 2️⃣ Cria o documento na coleção "users" no Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid) // ID do documento = UID do Auth
-          .set({
+      await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
         'uid': user.uid,
         'name': _nameController.text.trim(),
+        'surname': _surnameController.text.trim(),
         'email': user.email,
+
+        'cep': _cepController.text.trim(),
+        'state': _stateController.text.trim(),
+        'city': _cityController.text.trim(),
+        'street': _streetController.text.trim(),
+        'number': _numberController.text.trim(),
+
+        // 🔥 NOVO — salva o consentimento
+        'privacyConsent': true,
+
         'favorites': <String>[],
         'myPets': <String>[],
         'role': 'user',
-        'createdAt': FieldValue
-            .serverTimestamp(), // timestamp gerado pelo servidor
+        'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      // 3️⃣ Navega pra home
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, "/home");
     } on FirebaseAuthException catch (e) {
-      String message;
-      if (e.code == 'weak-password') {
-        message = 'A senha é muito fraca.';
-      } else if (e.code == 'email-already-in-use') {
-        message = 'Já existe uma conta com este e-mail.';
-      } else if (e.code == 'invalid-email') {
-        message = 'O formato do e-mail é inválido.';
-      } else {
-        message = 'Erro ao criar conta. Verifique os dados.';
-      }
-
       setState(() {
-        _errorMessage = message;
+        _errorMessage = e.code == "email-already-in-use"
+            ? "E-mail já em uso."
+            : e.code == "weak-password"
+                ? "Senha muito fraca."
+                : "Erro ao criar conta.";
       });
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Ocorreu um erro inesperado. Tente novamente.';
-      });
-      print('Erro no signup: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
+
+  // ==============================================================
+  // ========================== WIDGET =============================
+  // ==============================================================
 
   @override
   Widget build(BuildContext context) {
@@ -118,49 +213,85 @@ class _SignupScreenState extends State<SignupScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            padding: const EdgeInsets.symmetric(horizontal: 26),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Image.asset(
-                  'assets/images/logov3.png',
-                  width: 250,
-                  height: 250,
-                ),
-
-                const SizedBox(height: 10),
-
-                const Text(
-                  'Cadastrar',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 40,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFDC004E),
+                Center(
+                  child: Column(
+                    children: [
+                      Image.asset('assets/images/logov3.png', width: 220),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Cadastrar',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 38,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFDC004E),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
-                const SizedBox(height: 4),
-
-                const Text(
-                  'Criar uma nova conta',
-                  style: TextStyle(
-                    color: Color(0xFFFF5C00),
-                    fontFamily: 'Inter',
-                    fontSize: 20,
-                  ),
-                ),
-
-                const SizedBox(height: 40),
+                const SizedBox(height: 35),
+                _sectionTitle("Dados pessoais"),
 
                 _StyledInput(
-                  label: 'Nome de usuário',
-                  hint: 'Digite o nome de usuário',
+                  label: 'Nome',
+                  hint: 'Digite o seu primeiro nome',
                   controller: _nameController,
-                  keyboardType: TextInputType.name,
+                ),
+                const SizedBox(height: 18),
+
+                _StyledInput(
+                  label: 'Sobrenome',
+                  hint: 'Digite seu sobrenome',
+                  controller: _surnameController,
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 35),
+                _sectionTitle("Endereço"),
+
+                _StyledInput(
+                  label: 'CEP',
+                  hint: '00000-000',
+                  controller: _cepController,
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 18),
+
+                _StyledInput(
+                  label: 'Estado',
+                  hint: 'UF',
+                  controller: _stateController,
+                ),
+                const SizedBox(height: 18),
+
+                _StyledInput(
+                  label: 'Cidade',
+                  hint: 'Cidade',
+                  controller: _cityController,
+                ),
+                const SizedBox(height: 18),
+
+                _StyledInput(
+                  label: 'Rua',
+                  hint: 'Rua',
+                  controller: _streetController,
+                ),
+                const SizedBox(height: 18),
+
+                _StyledInput(
+                  label: 'Número',
+                  hint: 'Número',
+                  controller: _numberController,
+                  keyboardType: TextInputType.number,
+                ),
+
+                const SizedBox(height: 35),
+                _sectionTitle("Segurança"),
 
                 _StyledInput(
                   label: 'E-mail',
@@ -168,8 +299,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                 ),
-
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
 
                 _StyledInput(
                   label: 'Senha',
@@ -178,26 +308,45 @@ class _SignupScreenState extends State<SignupScreen> {
                   obscure: _obscurePassword,
                   isPassword: true,
                   onToggleVisibility: () {
-                    setState(() {
-                      _obscurePassword = !_obscurePassword;
-                    });
+                    setState(() => _obscurePassword = !_obscurePassword);
                   },
                 ),
-
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
 
                 _StyledInput(
-                  label: 'Confirme a senha',
+                  label: 'Confirmar senha',
                   hint: 'Repita sua senha',
                   controller: _confirmPasswordController,
                   obscure: _obscureConfirmPassword,
                   isPassword: true,
                   onToggleVisibility: () {
-                    setState(() {
-                      _obscureConfirmPassword = !_obscureConfirmPassword;
-                    });
+                    setState(
+                        () => _obscureConfirmPassword = !_obscureConfirmPassword);
                   },
-                  textInputAction: TextInputAction.done,
+                ),
+
+                // 🔥 NOVO — Checkbox
+                const SizedBox(height: 25),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _privacyAccepted,
+                      activeColor: const Color(0xFFDC004E),
+                      onChanged: (v) {
+                        setState(() => _privacyAccepted = v ?? false);
+                      },
+                    ),
+                    Expanded(
+                      child: Text(
+                        "Concordo em compartilhar minhas informações pessoais",
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          color: Colors.grey[800],
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
 
                 if (_errorMessage != null)
@@ -205,85 +354,76 @@ class _SignupScreenState extends State<SignupScreen> {
                     padding: const EdgeInsets.only(top: 15),
                     child: Text(
                       _errorMessage!,
-                      style: const TextStyle(color: Colors.red, fontSize: 14),
+                      style: const TextStyle(color: Colors.red),
                       textAlign: TextAlign.center,
                     ),
                   ),
 
                 const SizedBox(height: 40),
 
-                Container(
-                  width: 225,
-                  height: 45,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(15),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFDC004E), Color(0xFFFF5C00)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                Center(
+                  child: Container(
+                    width: 240,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(15),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFDC004E), Color(0xFFFF5C00)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFDC004E).withOpacity(0.4),
+                          offset: const Offset(0, 4),
+                          blurRadius: 10,
+                        )
+                      ],
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFDC004E).withOpacity(0.4),
-                        offset: const Offset(0, 4),
-                        blurRadius: 10,
-                        spreadRadius: 1,
+                    child: TextButton(
+                      onPressed: _isLoading ? null : _handleSignup,
+                      child: _isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                              'CRIAR CONTA',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Já tem uma conta? ',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          color: Colors.black54,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () =>
+                            Navigator.pushNamed(context, '/login'),
+                        child: const Text(
+                          'Logar',
+                          style: TextStyle(
+                            color: Color(0xFFFF5C00),
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                  child: TextButton(
-                    onPressed: _isLoading ? null : _handleSignup,
-                    style: TextButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text(
-                            'CRIAR CONTA',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                  ),
                 ),
 
-                const SizedBox(height: 15),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Já tem uma conta? ',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        color: Colors.black54,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => Navigator.pushNamed(context, '/login'),
-                      child: const Text(
-                        'Logar',
-                        style: TextStyle(
-                          color: Color(0xFFFF5C00),
-                          fontFamily: 'Poppins',
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                const SizedBox(height: 35),
               ],
             ),
           ),
@@ -291,11 +431,27 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
     );
   }
+
+  Widget _sectionTitle(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFFFF5C00),
+        ),
+      ),
+    );
+  }
 }
 
-// ------------------------------------------------------------
-// 🔹 Input reutilizável (com olhinho opcional)
-// ------------------------------------------------------------
+// ─────────────────────────────
+// 🔹 Input reutilizável
+// ─────────────────────────────
+
 class _StyledInput extends StatelessWidget {
   final String label;
   final String hint;
@@ -325,10 +481,8 @@ class _StyledInput extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontFamily: 'Poppins',
-            color: Colors.black54,
-          ),
+          style:
+              const TextStyle(fontFamily: 'Poppins', color: Colors.black54),
         ),
         const SizedBox(height: 6),
         Container(
@@ -338,7 +492,6 @@ class _StyledInput extends StatelessWidget {
                 color: const Color(0xFFDC004E).withOpacity(0.2),
                 offset: const Offset(0, 6),
                 blurRadius: 12,
-                spreadRadius: 0,
               ),
             ],
           ),
@@ -359,8 +512,8 @@ class _StyledInput extends StatelessWidget {
                 borderRadius: BorderRadius.circular(15),
                 borderSide: BorderSide.none,
               ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 14),
               suffixIcon: isPassword
                   ? IconButton(
                       icon: Icon(
