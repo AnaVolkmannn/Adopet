@@ -132,11 +132,9 @@ class CustomDrawer extends StatelessWidget {
                   context,
                   icon: Icons.logout,
                   label: 'Sair',
-                  onTap: () => Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    '/login',
-                    (route) => false,
-                  ),
+                  onTap: () async {
+                    await _logout(context);
+                  },
                 ),
 
                 const Padding(
@@ -157,6 +155,27 @@ class CustomDrawer extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Função para fazer o logout do Firebase e redirecionar para a tela de login
+  Future<void> _logout(BuildContext context) async {
+    try {
+      print('Iniciando logout...'); // Debug: Verificar se o logout é iniciado
+      await FirebaseAuth.instance.signOut(); // Realiza o logout do Firebase
+      print('Logout realizado!'); // Debug: Confirmar que o logout foi bem-sucedido
+
+      // Redireciona o usuário para a tela de login
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      print('Redirecionado para a tela de login'); // Debug: Confirmar que foi redirecionado
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao sair: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      print('Erro no logout: $e'); // Debug: Mostrar erro no console
+    }
   }
 
   static Widget _buildMenuItem(

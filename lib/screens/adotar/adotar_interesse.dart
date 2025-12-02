@@ -16,16 +16,25 @@ class _AdotarInteresseState extends State<AdotarInteresse> {
   final TextEditingController _mensagemController = TextEditingController();
 
   bool _isSending = false;
+  bool _isLoadingUser = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _telefoneController.addListener(_formatarTelefone);
+    _carregarDadosUsuario();
+  }
 
   @override
   void dispose() {
+    _telefoneController.removeListener(_formatarTelefone);
     _nomeController.dispose();
     _telefoneController.dispose();
     _mensagemController.dispose();
     super.dispose();
   }
 
-  // 🔹 INPUT PADRÃO ADOPET — MESMO DA TELA DE LOGIN
+  // 🔹 INPUT PADRÃO ADOPET — ROSINHA
   InputDecoration _inputAdopet(String hint) {
     return InputDecoration(
       filled: true,
@@ -44,6 +53,97 @@ class _AdotarInteresseState extends State<AdotarInteresse> {
         vertical: 14,
       ),
     );
+  }
+
+  static const TextStyle _labelStyle = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 15,
+    fontWeight: FontWeight.w600,
+    color: Color(0xFFDC004E),
+  );
+
+  // 🔥 Carrega nome e telefone do Firestore/Auth
+  Future<void> _carregarDadosUsuario() async {
+    try {
+      setState(() => _isLoadingUser = true);
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      String? nomeDb;
+      String? phoneDb;
+
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>?;
+        nomeDb = data?['name']?.toString();
+        phoneDb = data?['phone']?.toString();
+      }
+
+      // Nome: prioridade → Firestore > displayName
+      if (_nomeController.text.trim().isEmpty) {
+        if (nomeDb != null && nomeDb.trim().isNotEmpty) {
+          _nomeController.text = nomeDb;
+        } else if (user.displayName != null &&
+            user.displayName!.trim().isNotEmpty) {
+          _nomeController.text = user.displayName!;
+        }
+      }
+
+      // Telefone: pega do Firestore se tiver
+      if (_telefoneController.text.trim().isEmpty &&
+          phoneDb != null &&
+          phoneDb.trim().isNotEmpty) {
+        _telefoneController.text = phoneDb;
+      }
+    } catch (e) {
+      // Se der erro, só não preenche — não quebra a tela
+      debugPrint('Erro ao carregar dados do usuário: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingUser = false);
+      }
+    }
+  }
+
+  // 📱 MÁSCARA DE TELEFONE -> (99) 99999-9999
+  void _formatarTelefone() {
+    String text = _telefoneController.text;
+
+    // mantém só números
+    text = text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (text.length > 11) {
+      text = text.substring(0, 11);
+    }
+
+    String formatted = '';
+
+    if (text.isEmpty) {
+      formatted = '';
+    } else if (text.length <= 2) {
+      // (99
+      formatted = '(${text.substring(0, text.length)}';
+    } else if (text.length <= 7) {
+      // (99) 99999
+      formatted =
+          '(${text.substring(0, 2)}) ${text.substring(2, text.length)}';
+    } else {
+      // (99) 99999-9999
+      formatted =
+          '(${text.substring(0, 2)}) ${text.substring(2, 7)}-${text.substring(7)}';
+    }
+
+    if (formatted != _telefoneController.text) {
+      _telefoneController.value = TextEditingValue(
+        text: formatted,
+        selection: TextSelection.collapsed(offset: formatted.length),
+      );
+    }
   }
 
   Future<void> _enviarSolicitacao(BuildContext context) async {
@@ -129,17 +229,21 @@ class _AdotarInteresseState extends State<AdotarInteresse> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Color(0xFFDC004E)),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: Color(0xFFDC004E),
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                   const SizedBox(width: 4),
 
+                  // Título
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Adotar ${pet['nome'] ?? 'um Pet'}',
+                          'Adotar ${pet['nome'] ?? 'um pet'}',
                           style: const TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 22,
@@ -180,112 +284,152 @@ class _AdotarInteresseState extends State<AdotarInteresse> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0xFFD9D9D9),
-                  blurRadius: 6,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 10),
-
-                const Text(
-                  'Seus dados para contato',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
+          child: Column(
+            children: [
+              if (_isLoadingUser)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: LinearProgressIndicator(
                     color: Color(0xFFDC004E),
+                    backgroundColor: Color(0xFFFFE6EC),
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Divider(color: Color(0xFFDC004E)),
-
-                const SizedBox(height: 16),
-
-                // ⭐ INPUT NOME — PADRÃO ADOPET
-                TextField(
-                  controller: _nomeController,
-                  decoration: _inputAdopet('Seu nome completo'),
-                ),
-                const SizedBox(height: 16),
-
-                // ⭐ INPUT TELEFONE — PADRÃO ADOPET
-                TextField(
-                  controller: _telefoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: _inputAdopet('Telefone para contato'),
-                ),
-
-                const SizedBox(height: 50),
-
-                const Text(
-                  'Mensagem para o anunciante',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Color(0xFFDC004E),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Divider(color: Color(0xFFDC004E)),
-                const SizedBox(height: 16),
-
-                // ⭐ INPUT MENSAGEM — PADRÃO ADOPET
-                TextField(
-                  controller: _mensagemController,
-                  maxLines: 4,
-                  decoration: _inputAdopet('Por que você quer adotar esse pet?'),
-                ),
-
-                const SizedBox(height: 32),
-
-                // ❤️ BOTÃO ENVIAR
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFDC004E),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 16,
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x22000000),
+                      blurRadius: 8,
+                      offset: Offset(0, 3),
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  ],
+                ),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 4),
+
+                    const Text(
+                      'Seus dados para contato',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: Color(0xFFDC004E),
+                      ),
                     ),
-                    elevation: 2,
-                  ),
-                  onPressed: _isSending ? null : () => _enviarSolicitacao(context),
-                  child: _isSending
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Essas informações serão enviadas ao tutor do pet.',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        color: Color(0xFF7A7A7A),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Divider(color: Color(0xFFDC004E)),
+
+                    const SizedBox(height: 16),
+
+                    // ⭐ LABEL + INPUT NOME
+                    const Text('Nome completo', style: _labelStyle),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _nomeController,
+                      decoration: _inputAdopet('Seu nome completo'),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // ⭐ LABEL + INPUT TELEFONE
+                    const Text('Telefone com WhatsApp', style: _labelStyle),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _telefoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: _inputAdopet('(DDD) 99999-9999'),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    const Text(
+                      'Mensagem para o anunciante',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Color(0xFFDC004E),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'O tutor receberá sua mensagem junto com seus dados de contato.',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        color: Color(0xFF7A7A7A),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Divider(color: Color(0xFFDC004E)),
+                    const SizedBox(height: 16),
+
+                    TextField(
+                      controller: _mensagemController,
+                      maxLines: 4,
+                      decoration: _inputAdopet(
+                        'Tem alguma dúvida? Pergunte ao tutor aqui...',
+                      ),
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    // ❤️ BOTÃO ENVIAR
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFDC004E),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 16,
                           ),
-                        )
-                      : const Text(
-                          'Enviar Solicitação',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
                           ),
+                          elevation: 3,
                         ),
+                        onPressed: (_isSending || _isLoadingUser)
+                            ? null
+                            : () => _enviarSolicitacao(context),
+                        child: _isSending
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Enviar solicitação',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

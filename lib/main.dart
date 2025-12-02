@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // 👈 Import do Firebase Auth
-import 'firebase_options.dart';
-
-import 'core/theme.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'firebase_options.dart'; // Certifique-se de que esse arquivo é gerado corretamente
 
 // Telas principais
 import 'screens/home/splash_screen.dart';
@@ -14,6 +12,7 @@ import 'screens/home/home_screen.dart';
 import 'widgets/success_screen.dart';
 import 'screens/home/minha_conta.dart';
 import 'screens/home/editar_conta.dart';
+
 // Divulgar Pet
 import 'screens/divulgar_pet/divulgar_pet_01.dart';
 import 'screens/divulgar_pet/divulgar_pet_02.dart';
@@ -22,19 +21,21 @@ import 'screens/divulgar_pet/divulgar_pet_03.dart';
 // Adotar Pet
 import 'screens/adotar/adotar_home.dart';
 import 'screens/adotar/adotar_detalhes.dart';
-import 'screens/adotar/adotar_interesse.dart';
+import 'screens/adotar/adotar_interesse.dart';  
 
 // Meus Anúncios
 import 'screens/meus_anuncios/meus_anuncios_screen.dart';
 
-// 🚀 main assíncrona para inicializar o Firebase
 void main() async {
+  // Garantir que os Widgets sejam inicializados primeiro.
   WidgetsFlutterBinding.ensureInitialized();
-
+  
+  // Inicializar o Firebase antes de qualquer outra coisa
   await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+    options: DefaultFirebaseOptions.currentPlatform, // Certifique-se que este arquivo exista
   );
-
+  
+  // Rodar o app
   runApp(const MyApp());
 }
 
@@ -44,15 +45,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
+      debugShowCheckedModeBanner: false, // Remover a banner de debug
       title: 'Adopet',
-      theme: appTheme,
 
-      // 🔑 Em vez de initialRoute, usamos um "portão" de autenticação
+      // O AuthGate será o primeiro widget que controla a navegação
       home: const AuthGate(),
 
+      // Definição de rotas no app
       routes: {
-        // Se quiser ainda usar a splash em algum lugar:
         '/splash': (context) => const SplashScreen(),
         '/start': (context) => const StartScreen(),
         '/signup': (context) => const SignupScreen(),
@@ -69,42 +69,30 @@ class MyApp extends StatelessWidget {
         '/minha_conta': (context) => const MinhaContaScreen(),
         '/editar_conta': (context) => const EditarContaScreen(),
       },
-
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: const TextScaler.linear(1.0),
-          ),
-          child: child!,
-        );
-      },
     );
   }
 }
 
-/// 🛡 Widget que decide pra onde o usuário vai:
-/// - Splash enquanto carrega
-/// - Home se já estiver logado
-/// - Start se não estiver logado
+/// AuthGate decide a tela que o usuário verá baseado no estado de autenticação
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
+      stream: FirebaseAuth.instance.authStateChanges(), // Verifica o estado da autenticação
       builder: (context, snapshot) {
-        // ⏳ Enquanto o Firebase está verificando sessão
+        // Se o Firebase está verificando o estado de autenticação
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SplashScreen();
+          return const SplashScreen(); // Tela de splash enquanto verifica
         }
 
-        // ✅ Usuário logado: vai direto pra Home
+        // Se o usuário está autenticado, leva para a tela inicial (Home)
         if (snapshot.hasData) {
           return const HomeScreen();
         }
 
-        // 🚪 Ninguém logado: vai pra tela inicial (start)
+        // Se não estiver logado, leva para a tela inicial (Start)
         return const StartScreen();
       },
     );

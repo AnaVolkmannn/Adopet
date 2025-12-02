@@ -28,4 +28,8 @@ alterações finais
 - tirar email da terceira tela (usuario ja esta logado com email) ------------
 - colocar imagem do gatinho
 - manter sessao logada ------------
-- permitir administração basica de conta (trocar senha, colocar foto, endereço, contato, excluir conta)
+- permitir administração basica de conta (trocar senha, nome de user, telefone, email, excluir conta)
+- validação de todos os campos
+- campos obrigatorios (pelo menos uma foto)
+- não deixa continuar se não tiver tudo preenchido
+- api que preenche endereço automatico via cep

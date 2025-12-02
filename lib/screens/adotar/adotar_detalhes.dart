@@ -54,7 +54,6 @@ class _AdotarDetalhesState extends State<AdotarDetalhes> {
     return "($ddd) $first****-$last4";
   }
 
-  // 🔠 Pega apenas o primeiro nome
   String _primeiroNome(String? nome) {
     if (nome == null) return 'Nome não informado';
     final trimmed = nome.trim();
@@ -62,7 +61,6 @@ class _AdotarDetalhesState extends State<AdotarDetalhes> {
     return trimmed.split(RegExp(r'\s+')).first;
   }
 
-  // 🔍 Abre imagem em tela cheia com zoom
   void _abrirImagemFull(BuildContext context, String url) {
     showDialog(
       context: context,
@@ -90,31 +88,21 @@ class _AdotarDetalhesState extends State<AdotarDetalhes> {
     );
   }
 
-  // 👉 Sempre que mudar de página via seta / thumb
-  // atualiza o controller E o _currentPage.
-void _irParaPagina(int index, int total) {
-  if (total == 0) return;
+  void _irParaPagina(int index, int total) {
+    if (total == 0) return;
 
-  final int clamped = index.clamp(0, total - 1);
+    final clamped = index.clamp(0, total - 1);
 
-  setState(() {
-    _currentPage = clamped;
-  });
+    setState(() => _currentPage = clamped);
 
-  if (_pageController.hasClients) {
-    _pageController.animateToPage(
-      clamped,
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeInOut,
-    );
-  } else {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_pageController.hasClients) {
-        _pageController.jumpToPage(clamped);
-      }
-    });
+    if (_pageController.hasClients) {
+      _pageController.animateToPage(
+        clamped,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+      );
+    }
   }
-}
 
   // ----------------------------------------------------------
   // BUILD
@@ -128,18 +116,13 @@ void _irParaPagina(int index, int total) {
 
     if (petId == null) {
       return const Scaffold(
-        body: Center(
-          child: Text('ID do pet não informado.'),
-        ),
+        body: Center(child: Text('ID do pet não informado.')),
       );
     }
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFF7E6),
 
-      // ----------------------------------------------------------
-      // APPBAR
-      // ----------------------------------------------------------
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(115),
         child: AppBar(
@@ -198,26 +181,19 @@ void _irParaPagina(int index, int total) {
         ),
       ),
 
-      // ----------------------------------------------------------
-      // BODY
-      // ----------------------------------------------------------
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance
             .collection('pets')
             .doc(petId)
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (!snapshot.hasData) {
             return const Center(
               child: CircularProgressIndicator(color: Color(0xFFDC004E)),
             );
           }
 
-          if (snapshot.hasError) {
-            return Center(child: Text("Erro: ${snapshot.error}"));
-          }
-
-          if (!snapshot.hasData || !snapshot.data!.exists) {
+          if (!snapshot.data!.exists) {
             return const Center(child: Text("Pet não encontrado."));
           }
 
@@ -226,131 +202,53 @@ void _irParaPagina(int index, int total) {
           // ----------------------------------------------------------
           // DADOS DO PET
           // ----------------------------------------------------------
-
           final noName = data['noName'] == true;
           final nome = noName ? "Pet sem nome" : (data['name'] ?? '');
 
-          int? ageYears =
-              data['ageYears'] is num ? data['ageYears'].toInt() : null;
-          int? ageMonths =
-              data['ageMonths'] is num ? data['ageMonths'].toInt() : null;
-          final idade = _formatarIdade(ageYears, ageMonths);
+          final idade =
+              _formatarIdade(data['ageYears'], data['ageMonths']);
 
           final cidade = data['city'] ?? 'Cidade não informada';
           final estado = data['state'] ?? '';
           final localizacao =
               estado.isNotEmpty ? "$cidade • $estado" : cidade;
 
-          final especie = data['species'] ?? 'Não informada';
-          final genero = data['gender'] ?? 'Não informado';
-          final porte = data['size'] ?? 'Não informado';
-          final tipo = data['adType'] ?? 'Não informado';
           final descricao =
               data['description'] ?? 'Sem descrição disponível.';
 
-          final telefoneTutor = data['contactPhone'] ?? "*****";
+          final telefoneTutor =
+              data['contactPhone'] ?? 'Informado na solicitação';
 
-          // Tutor
-          final String tutorId = (data['tutorId'] ?? '').toString();
-          final String fallbackTutorName =
-              (data['tutorName'] ?? 'Nome não informado').toString();
-
-          // ----------- Imagens -------------------
-          List<String> fotos = [];
-          final rawPhotos = data['photoUrls'];
-
-          if (rawPhotos is List) {
-            fotos = rawPhotos.whereType<String>().toList();
-          }
-
-          // 🔄 Sempre recria o PageController se o número de fotos mudar
-          _pageController = PageController(initialPage: _currentPage);
-
-          const placeholderUrl =
-              'https://cdn-icons-png.flaticon.com/512/194/194279.png';
-
-          final String imagemPrincipal =
-              fotos.isNotEmpty ? fotos.first : placeholderUrl;
-
-          // Garante que o index atual nunca passe o total
-          if (fotos.isNotEmpty && _currentPage >= fotos.length) {
-            _currentPage = fotos.length - 1;
-          }
-          if (fotos.isEmpty && _currentPage != 0) {
-            _currentPage = 0;
-          }
-
-          // Dados para a próxima tela
-          final petArgs = {
-            'id': petId,
-            'nome': nome,
-            'cidade': cidade,
-            'estado': estado,
-            'imagem': imagemPrincipal,
-            'descricao': descricao,
-            'adType': tipo,
-            'especie': especie,
-            'genero': genero,
-            'porte': porte,
-            'idade': idade,
-            'tutorId': tutorId,
-            'tutorName': fallbackTutorName,
-          };
-
-          // Widget que mostra o anunciante puxando do usuário
-          Widget anuncianteWidget;
-          if (tutorId.isEmpty) {
-            anuncianteWidget =
-                _infoRow("Anunciante", _primeiroNome(fallbackTutorName));
-          } else {
-            anuncianteWidget = FutureBuilder<DocumentSnapshot>(
-              future: FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(tutorId)
-                  .get(),
-              builder: (context, snapTutor) {
-                if (snapTutor.connectionState == ConnectionState.waiting) {
-                  return _infoRow("Anunciante", "Carregando...");
-                }
-
-                if (!snapTutor.hasData ||
-                    !snapTutor.data!.exists ||
-                    snapTutor.hasError) {
-                  return _infoRow(
-                    "Anunciante",
-                    _primeiroNome(fallbackTutorName),
-                  );
-                }
-
-                final userData =
-                    snapTutor.data!.data() as Map<String, dynamic>?;
-
-                // usa só 'name' mesmo, igual está no Firestore
-                final rawName =
-                    (userData?['name'] ?? fallbackTutorName).toString();
-
-                final primeiroNome = _primeiroNome(rawName);
-
-                return _infoRow("Anunciante", primeiroNome);
-              },
-            );
-          }
+          final tutorId = data['tutorId'] ?? '';
+          final fallbackTutorName = data['tutorName'] ?? "Tutor";
 
           // ----------------------------------------------------------
-          // UI
+          // IMAGENS
+          // ----------------------------------------------------------
+          List<String> fotos = [];
+          if (data['photoUrls'] is List) {
+            fotos = (data['photoUrls'] as List)
+                .whereType<String>()
+                .toList();
+          }
+
+          const placeholder =
+              "https://cdn-icons-png.flaticon.com/512/194/194279.png";
+
+          // ----------------------------------------------------------
+          // WIDGET
           // ----------------------------------------------------------
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Container(
-              width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 boxShadow: const [
                   BoxShadow(
-                    color: Color(0xFFD9D9D9),
                     blurRadius: 6,
-                    offset: Offset(0, 2),
+                    color: Color(0x20000000),
+                    offset: Offset(0, 3),
                   ),
                 ],
               ),
@@ -358,140 +256,71 @@ void _irParaPagina(int index, int total) {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // 🖼️ CARROSSEL DE IMAGENS COM SETAS + CONTADOR
+                  // ------------------------------------------------------
+                  // CARROSSEL
+                  // ------------------------------------------------------
                   SizedBox(
-                    height: 250,
-                    child: fotos.isNotEmpty
-                        ? Stack(
-                            children: [
-                              PageView.builder(
-                                controller: _pageController,
-                                itemCount: fotos.length,
-                                onPageChanged: (index) {
-                                  setState(() {
-                                    _currentPage = index;
-                                  });
-                                },
-                                itemBuilder: (context, index) {
-                                  final url = fotos[index];
-                                  return GestureDetector(
-                                    onTap: () =>
-                                        _abrirImagemFull(context, url),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Image.network(
-                                        url,
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                        errorBuilder: (_, __, ___) =>
-                                            Container(
-                                          color: Colors.grey[300],
-                                          child: const Icon(
-                                            Icons.broken_image,
-                                            size: 70,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
+                    height: 260,
+                    child: Stack(
+                      children: [
+                        PageView.builder(
+                          controller: _pageController,
+                          itemCount: fotos.isNotEmpty ? fotos.length : 1,
+                          onPageChanged: (i) {
+                            setState(() => _currentPage = i);
+                          },
+                          itemBuilder: (_, i) {
+                            final url =
+                                fotos.isNotEmpty ? fotos[i] : placeholder;
+                            return GestureDetector(
+                              onTap: () => _abrirImagemFull(context, url),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: Image.network(
+                                  url,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                ),
                               ),
+                            );
+                          },
+                        ),
 
-                              // ◀️ Seta esquerda
-                              if (fotos.length > 1)
-                                Positioned(
-                                  left: 8,
-                                  top: 0,
-                                  bottom: 0,
-                                  child: Center(
-                                    child: GestureDetector(
-                                      onTap: () => _irParaPagina(
-                                        _currentPage - 1,
-                                        fotos.length,
-                                      ),
-                                      child: Container(
-                                        decoration: const BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Colors.black45,
-                                        ),
-                                        padding: const EdgeInsets.all(6),
-                                        child: const Icon(
-                                          Icons.chevron_left,
-                                          color: Colors.white,
-                                          size: 26,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                              // ▶️ Seta direita
-                              if (fotos.length > 1)
-                                Positioned(
-                                  right: 8,
-                                  top: 0,
-                                  bottom: 0,
-                                  child: Center(
-                                    child: GestureDetector(
-                                      onTap: () => _irParaPagina(
-                                        _currentPage + 1,
-                                        fotos.length,
-                                      ),
-                                      child: Container(
-                                        decoration: const BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Colors.black45,
-                                        ),
-                                        padding: const EdgeInsets.all(6),
-                                        child: const Icon(
-                                          Icons.chevron_right,
-                                          color: Colors.white,
-                                          size: 26,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                              // 📍 Indicador "1/3" no canto inferior direito
-                              if (fotos.length > 1)
-                                Positioned(
-                                  bottom: 10,
-                                  right: 12,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black54,
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      '${_currentPage + 1}/${fotos.length}',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontFamily: 'Poppins',
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          )
-                        : ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              placeholderUrl,
-                              height: 250,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                            ),
+                        if (fotos.length > 1)
+                          Positioned(
+                            left: 8,
+                            top: 0,
+                            bottom: 0,
+                            child: _arrowButton(
+                                Icons.chevron_left,
+                                () => _irParaPagina(
+                                    _currentPage - 1, fotos.length)),
                           ),
+
+                        if (fotos.length > 1)
+                          Positioned(
+                            right: 8,
+                            top: 0,
+                            bottom: 0,
+                            child: _arrowButton(
+                                Icons.chevron_right,
+                                () => _irParaPagina(
+                                    _currentPage + 1, fotos.length)),
+                          ),
+
+                        if (fotos.length > 1)
+                          Positioned(
+                            right: 12,
+                            bottom: 12,
+                            child: _indicator(
+                                _currentPage + 1, fotos.length),
+                          ),
+                      ],
+                    ),
                   ),
 
-                  // 🖼️ THUMBNAILS ABAIXO DO CARROSSEL
                   if (fotos.length > 1) ...[
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     SizedBox(
                       height: 70,
                       child: ListView.separated(
@@ -499,38 +328,27 @@ void _irParaPagina(int index, int total) {
                         itemCount: fotos.length,
                         separatorBuilder: (_, __) =>
                             const SizedBox(width: 8),
-                        itemBuilder: (context, index) {
-                          final thumbUrl = fotos[index];
-                          final bool isActive = index == _currentPage;
-
+                        itemBuilder: (_, i) {
+                          final url = fotos[i];
+                          final ativo = i == _currentPage;
                           return GestureDetector(
-                            onTap: () {
-                              _irParaPagina(index, fotos.length);
-                            },
+                            onTap: () => _irParaPagina(i, fotos.length),
                             child: Container(
                               width: 70,
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  color: isActive
+                                  color: ativo
                                       ? const Color(0xFFDC004E)
                                       : Colors.grey.shade300,
-                                  width: isActive ? 2 : 1,
+                                  width: ativo ? 2 : 1,
                                 ),
                               ),
                               child: ClipRRect(
-                                borderRadius: BorderRadius.circular(7),
+                                borderRadius: BorderRadius.circular(9),
                                 child: Image.network(
-                                  thumbUrl,
+                                  url,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
-                                    color: Colors.grey[300],
-                                    child: const Icon(
-                                      Icons.broken_image,
-                                      size: 24,
-                                      color: Colors.white,
-                                    ),
-                                  ),
                                 ),
                               ),
                             ),
@@ -542,6 +360,9 @@ void _irParaPagina(int index, int total) {
 
                   const SizedBox(height: 20),
 
+                  // ------------------------------------------------------
+                  // NOME + IDADE
+                  // ------------------------------------------------------
                   Text(
                     nome,
                     style: const TextStyle(
@@ -551,80 +372,46 @@ void _irParaPagina(int index, int total) {
                       color: Color(0xFFDC004E),
                     ),
                   ),
-
-                  const SizedBox(height: 6),
-
+                  const SizedBox(height: 4),
                   Text(
                     "$idade • $localizacao",
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                    ),
+                    style:
+                        const TextStyle(fontFamily: 'Poppins', fontSize: 15),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
+                  _sectionTitle("Informações Gerais"),
 
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "Informações Gerais",
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Color(0xFFDC004E),
-                      ),
-                    ),
+                  _infoRow("Espécie", data['species'] ?? '—'),
+                  _infoRow("Sexo", data['gender'] ?? '—'),
+                  _infoRow("Porte", data['size'] ?? '—'),
+                  _infoRow("Tipo de anúncio", data['adType'] ?? '—'),
+
+                  const SizedBox(height: 24),
+
+                  _sectionTitle("Anunciante"),
+
+                  FutureBuilder<DocumentSnapshot>(
+                    future: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(tutorId)
+                        .get(),
+                    builder: (_, snap) {
+                      if (!snap.hasData) {
+                        return _infoRow("Nome", _primeiroNome(fallbackTutorName));
+                      }
+                      final user = snap.data!.data() as Map<String, dynamic>?; 
+                      final nomeTutor =
+                          user?['name'] ?? fallbackTutorName;
+                      return _infoRow("Nome", _primeiroNome(nomeTutor));
+                    },
                   ),
-                  const Divider(color: Color(0xFFDC004E)),
-                  const SizedBox(height: 8),
 
-                  _infoRow("Espécie", especie),
-                  _infoRow("Sexo", genero),
-                  _infoRow("Porte", porte),
-                  _infoRow("Tipo de anúncio", tipo),
-                  _infoRow("Localização", localizacao),
-
-                  const SizedBox(height: 20),
-
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "Informações do Anunciante",
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Color(0xFFDC004E),
-                      ),
-                    ),
-                  ),
-                  const Divider(color: Color(0xFFDC004E)),
-                  const SizedBox(height: 8),
-
-                  // 👤 Nome do anunciante (primeiro nome do usuário)
-                  anuncianteWidget,
-
-                  // 📱 Telefone
                   _infoRow("Telefone", mascararTelefone(telefoneTutor)),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "Descrição",
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Color(0xFFDC004E),
-                      ),
-                    ),
-                  ),
-                  const Divider(color: Color(0xFFDC004E)),
-                  const SizedBox(height: 6),
-
+                  _sectionTitle("Descrição"),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
@@ -652,7 +439,16 @@ void _irParaPagina(int index, int total) {
                       Navigator.pushNamed(
                         context,
                         '/adotar_interesse',
-                        arguments: petArgs,
+                        arguments: {
+                          'id': petId,
+                          'nome': nome,
+                          'cidade': cidade,
+                          'estado': estado,
+                          'descricao': descricao,
+                          'imagem': fotos.isNotEmpty ? fotos.first : placeholder,
+                          'tutorId': tutorId,
+                          'tutorName': fallbackTutorName,
+                        },
                       );
                     },
                     child: const Text(
@@ -665,6 +461,9 @@ void _irParaPagina(int index, int total) {
                       ),
                     ),
                   ),
+
+                  // Respiro final de 50px
+                  const SizedBox(height: 50),
                 ],
               ),
             ),
@@ -674,14 +473,69 @@ void _irParaPagina(int index, int total) {
     );
   }
 
-  // Widget auxiliar de linha informativa
+  // ----------------------------------------------------------
+  // COMPONENTES DE UI
+  // ----------------------------------------------------------
+
+  Widget _arrowButton(IconData icon, Function onTap) {
+    return GestureDetector(
+      onTap: () => onTap(),
+      child: Container(
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.black45,
+        ),
+        padding: const EdgeInsets.all(6),
+        child: Icon(icon, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _indicator(int current, int total) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black54,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        "$current/$total",
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontFamily: 'Poppins',
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String text) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          text,
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFFDC004E),
+          ),
+        ),
+        const SizedBox(height: 4),
+        const Divider(color: Color(0xFFDC004E)),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
   Widget _infoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
           SizedBox(
-            width: 150,
+            width: 130,
             child: Text(
               "$label:",
               style: const TextStyle(

@@ -11,11 +11,11 @@ class HomeScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.background,
-        elevation: 10,
+        elevation: 0,
         automaticallyImplyLeading: false,
         titleSpacing: 10,
         title: Padding(
-          padding: const EdgeInsets.only(left: 0, top: 15, bottom: 0),
+          padding: const EdgeInsets.only(left: 0, top: 30, bottom: 25),
           child: Row(
             children: [
               Image.asset(
