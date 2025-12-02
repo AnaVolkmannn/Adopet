@@ -113,11 +113,16 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
     }
 
     final Map<String, dynamic> finalPetData = {
-      ..._petData!,
+      ..._petData!, // mantém os dados das telas 1 e 2
+
       'mode': _isEdit ? 'edit' : 'create',
       'contactPhone': telefoneController.text.trim(),
       'contactEmail':
           emailController.text.trim().isEmpty ? null : emailController.text.trim(),
+
+      // 🔥 ESSENCIAL: repassar IMAGENS adiante
+      'existingPhotos': _petData!['existingPhotos'],
+      'newPhotos': _petData!['newPhotos'],
     };
 
     Navigator.pushNamed(context, '/success', arguments: finalPetData);

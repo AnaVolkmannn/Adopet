@@ -11,7 +11,7 @@ class CustomDrawer extends StatelessWidget {
 
     final user = FirebaseAuth.instance.currentUser;
 
-    // PEGA O NOME DO USUÁRIO
+    // 🔹 PEGA O NOME DO USUÁRIO
     String nomeUsuario = 'Usuário';
 
     if (user != null) {
@@ -23,6 +23,9 @@ class CustomDrawer extends StatelessWidget {
         nomeUsuario = user.uid.substring(0, 6);
       }
     }
+
+    // 🔹 PEGA APENAS O PRIMEIRO NOME
+    final primeiroNome = nomeUsuario.split(' ').first;
 
     return Align(
       alignment: Alignment.centerRight,
@@ -71,7 +74,7 @@ class CustomDrawer extends StatelessWidget {
                               const SizedBox(width: 15),
 
                               Text(
-                                'Olá,\n$nomeUsuario!',
+                                'Olá,\n$primeiroNome!',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontFamily: 'Poppins',
@@ -92,26 +95,31 @@ class CustomDrawer extends StatelessWidget {
                           label: 'Meus anúncios',
                           onTap: () => Navigator.pushNamed(context, '/meus_anuncios'),
                         ),
+
                         _buildMenuItem(
                           context,
                           icon: Icons.pets,
                           label: 'Adotar um Pet',
                           onTap: () => Navigator.pushNamed(context, '/adotar_home'),
                         ),
+
                         _buildMenuItem(
                           context,
                           icon: Icons.add_circle_outline,
                           label: 'Criar anúncio',
                           onTap: () => Navigator.pushNamed(context, '/divulgar1'),
                         ),
+
+                        _buildMenuItem(
+                          context,
+                          icon: Icons.person_outline,
+                          label: 'Minha Conta',
+                          onTap: () => Navigator.pushNamed(context, '/minha_conta'),
+                        ),
                       ],
                     ),
                   ),
                 ),
-
-                // --------------------------------------------------------
-                // 🚨 BOTÃO SAIR FIXO AO RODAPÉ
-                // --------------------------------------------------------
 
                 const Divider(
                   thickness: 2,

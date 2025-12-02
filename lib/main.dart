@@ -12,7 +12,8 @@ import 'screens/home/signup_screen.dart';
 import 'screens/home/login_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'widgets/success_screen.dart';
-
+import 'screens/home/minha_conta.dart';
+import 'screens/home/editar_conta.dart';
 // Divulgar Pet
 import 'screens/divulgar_pet/divulgar_pet_01.dart';
 import 'screens/divulgar_pet/divulgar_pet_02.dart';
@@ -65,6 +66,8 @@ class MyApp extends StatelessWidget {
         '/adotar_interesse': (context) => const AdotarInteresse(),
         '/meus_anuncios': (context) => const MeusAnunciosScreen(),
         '/success': (context) => const SuccessScreen(),
+        '/minha_conta': (context) => const MinhaContaScreen(),
+        '/editar_conta': (context) => const EditarContaScreen(),
       },
 
       builder: (context, child) {

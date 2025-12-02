@@ -354,7 +354,6 @@ class _StyledInput extends StatelessWidget {
     this.textInputAction = TextInputAction.next,
     this.isPassword = false,                 // 👈 default também
     this.onToggleVisibility,
-    super.key,
   });
 
   @override

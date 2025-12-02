@@ -21,7 +21,7 @@ class _SuccessScreenState extends State<SuccessScreen> {
   void initState() {
     super.initState();
 
-    // 🔥 IMPORTANTE: evita erro de dependOnInheritedWidget no initState
+    // Evita dependOnInheritedWidget no initState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _salvarAnuncio();
     });
@@ -53,57 +53,62 @@ class _SuccessScreenState extends State<SuccessScreen> {
         return;
       }
 
-      // -------- DEFINIR SE É CRIAÇÃO OU EDIÇÃO --------
+      // ---------------------------
+      // MODO: CREATE x EDIT
+      // ---------------------------
       final String mode = (finalPetData['mode'] ?? 'create') as String;
       final bool isEdit = mode == 'edit';
       final String? petIdFromData = finalPetData['petId'] as String?;
 
-      // -------- FOTOS --------
-      // fotos novas (Files) vindas das telas
-      final photos = finalPetData['photos'];
-      List<File> arquivos = [];
-      if (photos is List) {
-        try {
-          arquivos = photos.cast<File>();
-        } catch (_) {
-          arquivos = [];
+      // ---------------------------
+      // FOTOS: existingPhotos + newPhotos
+      // ---------------------------
+
+      // URLs que sobraram depois da edição (vindas da tela 1)
+      List<String> existingPhotos = [];
+      final existingDynamic = finalPetData['existingPhotos'];
+      if (existingDynamic is List) {
+        existingPhotos = existingDynamic.whereType<String>().toList();
+      }
+
+      // Novas fotos selecionadas (Files)
+      List<File> newPhotos = [];
+      final newPhotosDynamic = finalPetData['newPhotos'];
+      if (newPhotosDynamic is List) {
+        for (final item in newPhotosDynamic) {
+          if (item is File) {
+            newPhotos.add(item);
+          }
         }
       }
 
-      // fotoUrls antigas (se veio de um anúncio já salvo)
-      final oldPhotoUrls =
-          (finalPetData['photoUrls'] as List?)?.cast<String>() ?? [];
+      // Lista final que será salva no Firestore
+      final List<String> finalPhotoUrls = [...existingPhotos];
 
-      List<String> fotoUrls = [];
+      // Faz upload das fotos novas e adiciona as URLs
+      for (File file in newPhotos) {
+        final String fileName =
+            'pets/${user.uid}_${DateTime.now().millisecondsSinceEpoch}_${finalPhotoUrls.length}.jpg';
 
-      if (arquivos.isEmpty) {
-        // 👇 Nenhuma nova foto selecionada → reaproveita as antigas (se existirem)
-        fotoUrls = oldPhotoUrls;
-      } else {
-        // 👇 Subir novas fotos e usar as URLs novas (você pode mudar pra mesclar se quiser)
-        for (File file in arquivos) {
-          final String fileName =
-              'pets/${user.uid}_${DateTime.now().millisecondsSinceEpoch}_${fotoUrls.length}.jpg';
+        final ref = FirebaseStorage.instance.ref().child(fileName);
 
-          final ref = FirebaseStorage.instance.ref().child(fileName);
+        final uploadTask = await ref.putFile(file);
+        final String downloadUrl = await uploadTask.ref.getDownloadURL();
 
-          await ref.putFile(file);
-
-          String downloadUrl = await ref.getDownloadURL();
-          fotoUrls.add(downloadUrl);
-        }
+        finalPhotoUrls.add(downloadUrl);
       }
 
-      // -------- FIRESTORE --------
+      // ---------------------------
+      // FIRESTORE
+      // ---------------------------
       final collection = FirebaseFirestore.instance.collection('pets');
 
-      // Se for edição e tiver petId, usamos o mesmo doc. Senão, criamos um novo.
+      // Se for edição com petId, reaproveita o mesmo doc
       final docRef =
           (isEdit && petIdFromData != null && petIdFromData.isNotEmpty)
               ? collection.doc(petIdFromData)
               : collection.doc();
 
-      // Monta o map com os dados finais
       final Map<String, dynamic> dataToSave = {
         "petId": docRef.id,
         "tutorId": user.uid,
@@ -114,7 +119,10 @@ class _SuccessScreenState extends State<SuccessScreen> {
         "size": finalPetData["size"],
         "ageYears": finalPetData["ageYears"] ?? 0,
         "ageMonths": finalPetData["ageMonths"] ?? 0,
-        "photoUrls": fotoUrls,
+
+        // ⭐ AGORA VAI SÓ A LISTA FINAL CORRETA
+        "photoUrls": finalPhotoUrls,
+
         "adType": finalPetData["adType"],
         "state": finalPetData["state"],
         "city": finalPetData["city"],
@@ -126,12 +134,11 @@ class _SuccessScreenState extends State<SuccessScreen> {
         "updatedAt": FieldValue.serverTimestamp(),
       };
 
-      // Só define createdAt quando for criação
+      // createdAt apenas na criação
       if (!isEdit) {
         dataToSave["createdAt"] = FieldValue.serverTimestamp();
       }
 
-      // Se for edição, podemos fazer merge pra não apagar campos antigos
       await docRef.set(
         dataToSave,
         SetOptions(merge: isEdit),
@@ -223,7 +230,10 @@ class _SuccessScreenState extends State<SuccessScreen> {
                           text: 'Voltar ao início',
                           onPressed: () =>
                               Navigator.pushNamedAndRemoveUntil(
-                                  context, '/home', (route) => false),
+                            context,
+                            '/home',
+                            (route) => false,
+                          ),
                         ),
                       ],
                     ),

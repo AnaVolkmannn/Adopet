@@ -1,10 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme.dart';
-import '../../../core/spacing.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:flutter/services.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -16,6 +15,8 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _surnameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _telefoneController = TextEditingController();  // Adicionado o controlador de telefone
 
   final TextEditingController _cepController = TextEditingController();
   final TextEditingController _stateController = TextEditingController();
@@ -23,10 +24,8 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _streetController = TextEditingController();
   final TextEditingController _numberController = TextEditingController();
 
-  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController =
-      TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -34,96 +33,18 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
+  // Adicionando máscara para o telefone
+  final telefoneMask = MaskTextInputFormatter(mask: "(##) #####-####", filter: {"#": RegExp(r'[0-9]')});
+
   // 🔹 NOVO — checkbox para consentimento
   bool _privacyAccepted = false;
 
   @override
   void initState() {
     super.initState();
-    _cepController.addListener(_maskCepAndSearch);
   }
 
-  void _maskCepAndSearch() {
-    String numeric = _cepController.text.replaceAll(RegExp(r'[^0-9]'), '');
-
-    if (numeric.length > 8) numeric = numeric.substring(0, 8);
-
-    String formatted = numeric.length >= 5
-        ? "${numeric.substring(0, 5)}-${numeric.substring(5)}"
-        : numeric;
-
-    if (formatted != _cepController.text) {
-      _cepController.value = TextEditingValue(
-        text: formatted,
-        selection: TextSelection.collapsed(offset: formatted.length),
-      );
-    }
-
-    if (numeric.length == 8) {
-      _fetchViaCep(formatted);
-    }
-  }
-
-  Future<void> _fetchViaCep(String cep) async {
-    final cleanedCep = cep.replaceAll('-', '');
-
-    try {
-      final response = await http
-          .get(Uri.parse("https://viacep.com.br/ws/$cleanedCep/json/"))
-          .timeout(const Duration(seconds: 5));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-
-        if (data["erro"] == true) {
-          _showCepError("CEP não encontrado.");
-          return;
-        }
-
-        setState(() {
-          _stateController.text = data["uf"] ?? "";
-          _cityController.text = data["localidade"] ?? "";
-          _streetController.text = data["logradouro"] ?? "";
-        });
-      } else {
-        _showCepError("Erro ao consultar CEP.");
-      }
-    } catch (e) {
-      _showCepError("Não foi possível conectar ao ViaCEP.");
-    }
-  }
-
-  void _showCepError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: Colors.red,
-      ),
-    );
-
-    setState(() {
-      _stateController.clear();
-      _cityController.clear();
-      _streetController.clear();
-    });
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _surnameController.dispose();
-    _cepController.dispose();
-    _stateController.dispose();
-    _cityController.dispose();
-    _streetController.dispose();
-    _numberController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
-  }
-
-  // ==============================================================
+  // ============================================================== 
   // ===================== 🔥 CRIAR CONTA =========================
   // ==============================================================
 
@@ -165,12 +86,13 @@ class _SignupScreenState extends State<SignupScreen> {
 
       await user.updateDisplayName(_nameController.text.trim());
 
+      // Criando os dados no Firestore
       await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
         'uid': user.uid,
         'name': _nameController.text.trim(),
         'surname': _surnameController.text.trim(),
         'email': user.email,
-
+        'phone': _telefoneController.text.trim(),  // Salvando telefone no Firestore
         'cep': _cepController.text.trim(),
         'state': _stateController.text.trim(),
         'city': _cityController.text.trim(),
@@ -202,7 +124,7 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  // ==============================================================
+  // ============================================================== 
   // ========================== WIDGET =============================
   // ==============================================================
 
@@ -265,6 +187,16 @@ class _SignupScreenState extends State<SignupScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                 ),
+                const SizedBox(height: 18),
+
+                _StyledInput(
+                  label: 'Telefone',
+                  hint: '(xx) xxxxx-xxxx',
+                  controller: _telefoneController,
+                  keyboardType: TextInputType.phone,
+                  inputFormatter: telefoneMask,  // Aplicando a máscara de telefone
+                ),
+                const SizedBox(height: 18),
 
                 const SizedBox(height: 35),
                 _sectionTitle("Endereço"),
@@ -468,6 +400,7 @@ class _StyledInput extends StatelessWidget {
   final TextInputType keyboardType;
   final TextInputAction textInputAction;
   final VoidCallback? onToggleVisibility;
+  final TextInputFormatter? inputFormatter;
 
   const _StyledInput({
     required this.label,
@@ -478,6 +411,7 @@ class _StyledInput extends StatelessWidget {
     this.keyboardType = TextInputType.text,
     this.textInputAction = TextInputAction.next,
     this.onToggleVisibility,
+    this.inputFormatter,
     super.key,
   });
 
@@ -531,6 +465,7 @@ class _StyledInput extends StatelessWidget {
                     )
                   : null,
             ),
+            inputFormatters: inputFormatter != null ? [inputFormatter!] : [],
           ),
         ),
       ],

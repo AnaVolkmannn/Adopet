@@ -275,7 +275,6 @@ class MeusAnunciosScreen extends StatelessWidget {
                         ),
                         TextButton(
                           onPressed: () {
-                            // Monta o map com os dados atuais do anúncio
                             final petData = {
                               'mode': 'edit',
                               'petId': doc.id,
@@ -293,7 +292,11 @@ class MeusAnunciosScreen extends StatelessWidget {
                               'foundDate': data['foundDate'],
                               'contactPhone': data['contactPhone'],
                               'contactEmail': data['contactEmail'],
-                              'photoUrls': data['photoUrls'],
+
+                              // 🔥 CORREÇÃO IMPORTANTE!
+                              'photoUrls': (data['photoUrls'] is List)
+                                  ? List<String>.from(data['photoUrls'])
+                                  : <String>[],
                             };
 
                             Navigator.pushNamed(
@@ -313,7 +316,6 @@ class MeusAnunciosScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 12),
                   ],
                 ),

@@ -57,6 +57,7 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is Map<String, dynamic>) {
       _petData = Map<String, dynamic>.from(args);
+
       _isEdit = (_petData?['mode'] == 'edit');
 
       if (_isEdit) {
@@ -81,34 +82,26 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
     _aplicarEstadoCidadeSePossivel();
   }
 
-  // ---------------------------------------------------------
-  // MÁSCARA PARA DATA: dd/mm/aaaa
-  // ---------------------------------------------------------
+  // ---------------------------------------------------------------------
+  // MÁSCARA PARA DATA
+  // ---------------------------------------------------------------------
   void _formatarData() {
     String text = dataController.text;
     text = text.replaceAll(RegExp(r'[^0-9]'), '');
 
-    if (text.length > 8) {
-      text = text.substring(0, 8);
-    }
+    if (text.length > 8) text = text.substring(0, 8);
 
     String formatted = "";
 
     if (text.length >= 2) {
       formatted = text.substring(0, 2) + "/";
-    } else if (text.length >= 1) {
-      formatted = text;
-    }
+    } else if (text.length >= 1) formatted = text;
 
     if (text.length >= 4) {
       formatted += text.substring(2, 4) + "/";
-    } else if (text.length > 2) {
-      formatted += text.substring(2);
-    }
+    } else if (text.length > 2) formatted += text.substring(2);
 
-    if (text.length > 4) {
-      formatted += text.substring(4);
-    }
+    if (text.length > 4) formatted += text.substring(4);
 
     if (formatted != dataController.text) {
       dataController.value = TextEditingValue(
@@ -118,17 +111,18 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
     }
   }
 
-  // ---------------------------------------------------------
+  // ---------------------------------------------------------------------
   // CARREGAR ESTADOS
-  // ---------------------------------------------------------
+  // ---------------------------------------------------------------------
   Future<void> _carregarEstados() async {
     setState(() => _loadingEstados = true);
 
     try {
-      final uri = Uri.parse(
-        'https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome',
+      final response = await http.get(
+        Uri.parse(
+          'https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome',
+        ),
       );
-      final response = await http.get(uri);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
@@ -142,15 +136,13 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
         _aplicarEstadoCidadeSePossivel();
       }
     } catch (_) {} finally {
-      if (mounted) {
-        setState(() => _loadingEstados = false);
-      }
+      if (mounted) setState(() => _loadingEstados = false);
     }
   }
 
-  // ---------------------------------------------------------
+  // ---------------------------------------------------------------------
   // CARREGAR CIDADES
-  // ---------------------------------------------------------
+  // ---------------------------------------------------------------------
   Future<void> _carregarCidades(String uf, {String? cidadeInicial}) async {
     setState(() {
       _loadingCidades = true;
@@ -159,13 +151,15 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
     });
 
     try {
-      final uri = Uri.parse(
-        'https://servicodados.ibge.gov.br/api/v1/localidades/estados/$uf/municipios?orderBy=nome',
+      final response = await http.get(
+        Uri.parse(
+          'https://servicodados.ibge.gov.br/api/v1/localidades/estados/$uf/municipios?orderBy=nome',
+        ),
       );
-      final response = await http.get(uri);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
+
         _cidades = data.map((e) => e['nome'].toString()).toList();
 
         if (cidadeInicial != null && _cidades.contains(cidadeInicial)) {
@@ -173,9 +167,7 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
         }
       }
     } catch (_) {} finally {
-      if (mounted) {
-        setState(() => _loadingCidades = false);
-      }
+      if (mounted) setState(() => _loadingCidades = false);
     }
   }
 
@@ -189,14 +181,13 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
     }
   }
 
-  // ---------------------------------------------------------
+  // ---------------------------------------------------------------------
   // VALIDA DATA
-  // ---------------------------------------------------------
+  // ---------------------------------------------------------------------
   bool _validarData(String data) {
     if (data.isEmpty) return true; // opcional
 
     final partes = data.split("/");
-
     if (partes.length != 3) return false;
 
     final dia = int.tryParse(partes[0]);
@@ -216,9 +207,9 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
     }
   }
 
-  // ---------------------------------------------------------
-  // BOTÃO AVANÇAR
-  // ---------------------------------------------------------
+  // ---------------------------------------------------------------------
+  // BOTÃO "PRÓXIMO"
+  // ---------------------------------------------------------------------
   void _proximoPasso() {
     if (_tipoSituacao == null) {
       return _erro("Escolha o tipo de anúncio.");
@@ -233,7 +224,8 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
     }
 
     final updatedData = {
-      ..._petData!,
+      ..._petData!, // mantém TUDO da tela 1
+
       'mode': _isEdit ? 'edit' : 'create',
       'adType': _tipoSituacao,
       'state': _estadoSelecionado,
@@ -242,23 +234,28 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
       'foundDate': dataController.text.trim().isEmpty
           ? null
           : dataController.text.trim(),
+
+      // 🔥 IMPORTANTE → manter imagens vindas da tela 1
+      'existingPhotos': _petData!['existingPhotos'],
+      'newPhotos': _petData!['newPhotos'],
     };
 
-    Navigator.pushNamed(context, '/divulgar3', arguments: updatedData);
+    Navigator.pushNamed(
+      context,
+      '/divulgar3',
+      arguments: updatedData,
+    );
   }
 
   void _erro(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: const Color(0xFFDC004E),
-      ),
+      SnackBar(content: Text(msg), backgroundColor: const Color(0xFFDC004E)),
     );
   }
 
-  // ---------------------------------------------------------
+  // ---------------------------------------------------------------------
   // BUILD
-  // ---------------------------------------------------------
+  // ---------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     return AnuncioBaseScreen(
@@ -281,8 +278,10 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
               decoration: _decoracaoAdopet("Selecione o tipo de anúncio"),
               dropdownColor: const Color(0xFFFFE6EC),
               items: const [
-                DropdownMenuItem(value: 'Doacao', child: Text('Quero doar um pet meu')),
-                DropdownMenuItem(value: 'Achado', child: Text('Encontrei um pet perdido')),
+                DropdownMenuItem(
+                    value: 'Doacao', child: Text('Quero doar um pet meu')),
+                DropdownMenuItem(
+                    value: 'Achado', child: Text('Encontrei um pet perdido')),
               ],
               onChanged: (v) => setState(() => _tipoSituacao = v),
             ),
@@ -293,19 +292,20 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
             const SizedBox(height: 10),
 
             _loadingEstados
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFFDC004E)))
+                ? const Center(
+                    child:
+                        CircularProgressIndicator(color: Color(0xFFDC004E)),
+                  )
                 : DropdownButtonFormField<String>(
-                    value: _estadoSelecionado,
                     isExpanded: true,
+                    value: _estadoSelecionado,
                     decoration: _decoracaoAdopet("Selecione o estado"),
                     dropdownColor: const Color(0xFFFFE6EC),
                     items: _estados
-                        .map(
-                          (e) => DropdownMenuItem(
-                            value: e['sigla'],
-                            child: Text("${e['sigla']} - ${e['nome']}"),
-                          ),
-                        )
+                        .map((e) => DropdownMenuItem(
+                              value: e['sigla'],
+                              child: Text("${e['sigla']} - ${e['nome']}"),
+                            ))
                         .toList(),
                     onChanged: (v) {
                       if (v == null) return;
@@ -321,14 +321,21 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
 
             if (_estadoSelecionado != null)
               _loadingCidades
-                  ? const Center(child: CircularProgressIndicator(color: Color(0xFFDC004E)))
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFDC004E),
+                      ),
+                    )
                   : DropdownButtonFormField<String>(
-                      value: _cidadeSelecionada,
                       isExpanded: true,
+                      value: _cidadeSelecionada,
                       decoration: _decoracaoAdopet("Selecione a cidade"),
                       dropdownColor: const Color(0xFFFFE6EC),
                       items: _cidades
-                          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                          .map((c) => DropdownMenuItem(
+                                value: c,
+                                child: Text(c),
+                              ))
                           .toList(),
                       onChanged: (v) => setState(() => _cidadeSelecionada = v),
                     ),
@@ -337,20 +344,21 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
 
             CustomInput(
               label: "Descrição do pet e da situação",
-              hint: "Conte mais detalhes sobre o pet e o motivo do anúncio... Possui vacinas? Está castrado? Onde foi encontrado? etc.",
+              hint:
+                  "Conte mais detalhes sobre o pet e o motivo do anúncio...",
               controller: descricaoController,
               maxLines: 3,
             ),
 
             const SizedBox(height: 20),
 
-          if (_tipoSituacao == 'Achado')
-            CustomInput(
-              label: "Data em que encontrou o pet",
-              hint: "dd/mm/aaaa",
-              controller: dataController,
-              keyboardType: TextInputType.number,
-            ),
+            if (_tipoSituacao == 'Achado')
+              CustomInput(
+                label: "Data em que encontrou o pet",
+                hint: "dd/mm/aaaa",
+                controller: dataController,
+                keyboardType: TextInputType.number,
+              ),
 
             const SizedBox(height: 20),
           ],
@@ -359,10 +367,9 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
     );
   }
 
-  // ---------------------------------------------------------
+  // ---------------------------------------------------------------------
   // ESTILOS
-  // ---------------------------------------------------------
-
+  // ---------------------------------------------------------------------
   static const _labelStyle = TextStyle(
     fontFamily: 'Poppins',
     fontSize: 16,
