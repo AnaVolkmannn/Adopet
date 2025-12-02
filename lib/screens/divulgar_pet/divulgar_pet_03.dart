@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../widgets/anuncio_base_screen.dart';
-import '../../widgets/custom_input.dart';
 
 class DivulgarPet03 extends StatefulWidget {
   const DivulgarPet03({super.key});
@@ -24,6 +26,7 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
   void initState() {
     super.initState();
     telefoneController.addListener(_formatarTelefone);
+    _carregarContatoUsuario(); // 🔥 busca dados do cadastro
   }
 
   @override
@@ -62,11 +65,58 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
   }
 
   // ------------------------------------------------------------------
+  // 📱 CARREGA CONTATO DO CADASTRO (FIRESTORE + AUTH)
+  // ------------------------------------------------------------------
+  Future<void> _carregarContatoUsuario() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // Evita sobrescrever caso já tenha vindo algo do anúncio em edição
+      if (telefoneController.text.trim().isNotEmpty &&
+          emailController.text.trim().isNotEmpty) {
+        return;
+      }
+
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      String? phoneDb;
+      String? emailDb;
+
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>?;
+        phoneDb = data?['phone']?.toString();
+        emailDb = data?['email']?.toString();
+      }
+
+      if (telefoneController.text.trim().isEmpty &&
+          phoneDb != null &&
+          phoneDb.trim().isNotEmpty) {
+        telefoneController.text = phoneDb;
+      }
+
+      if (emailController.text.trim().isEmpty) {
+        if (emailDb != null && emailDb.trim().isNotEmpty) {
+          emailController.text = emailDb;
+        } else if (user.email != null && user.email!.trim().isNotEmpty) {
+          emailController.text = user.email!;
+        }
+      }
+    } catch (_) {
+      // Se der erro, só não preenche — não quebra a tela
+    }
+  }
+
+  // ------------------------------------------------------------------
   // 📱 MÁSCARA DE TELEFONE -> (99) 99999-9999
   // ------------------------------------------------------------------
   void _formatarTelefone() {
     String text = telefoneController.text;
 
+    // mantém só números
     text = text.replaceAll(RegExp(r'[^0-9]'), '');
 
     if (text.length > 11) {
@@ -75,22 +125,40 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
 
     String formatted = '';
 
-    if (text.length >= 1) formatted = '(${text.substring(0, 2)}';
-    if (text.length >= 2) formatted = '(${text.substring(0, 2)}) ';
-    if (text.length >= 3) formatted += text.substring(2);
-
-    if (text.length > 7) {
+    if (text.isEmpty) {
+      formatted = '';
+    } else if (text.length <= 2) {
+      // (99
+      formatted = '(${text.substring(0, text.length)}';
+    } else if (text.length <= 7) {
+      // (99) 99999
+      formatted =
+          '(${text.substring(0, 2)}) ${text.substring(2, text.length)}';
+    } else {
+      // (99) 99999-9999
       formatted =
           '(${text.substring(0, 2)}) ${text.substring(2, 7)}-${text.substring(7)}';
     }
 
     if (formatted != telefoneController.text) {
-      final cursorPos = formatted.length;
       telefoneController.value = TextEditingValue(
         text: formatted,
-        selection: TextSelection.collapsed(offset: cursorPos),
+        selection: TextSelection.collapsed(offset: formatted.length),
       );
     }
+
+    // 🔥 força rebuild pra atualizar o estado do botão "Prosseguir"
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // REGRA PARA HABILITAR O BOTÃO "PROSSEGUIR"
+  // ------------------------------------------------------------------
+  bool get _podeAvancar {
+    final telOk = telefoneController.text.trim().isNotEmpty;
+    return _declaracaoAceita && telOk;
   }
 
   // ------------------------------------------------------------------
@@ -117,8 +185,9 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
 
       'mode': _isEdit ? 'edit' : 'create',
       'contactPhone': telefoneController.text.trim(),
-      'contactEmail':
-          emailController.text.trim().isEmpty ? null : emailController.text.trim(),
+      'contactEmail': emailController.text.trim().isEmpty
+          ? null
+          : emailController.text.trim(),
 
       // 🔥 ESSENCIAL: repassar IMAGENS adiante
       'existingPhotos': _petData!['existingPhotos'],
@@ -143,6 +212,7 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
     return AnuncioBaseScreen(
       onBack: () => Navigator.pop(context),
       onNext: _proximoPasso,
+      nextEnabled: _podeAvancar, // 🔥 integra com o botão padrão da base
       title: _isEdit ? 'Editar Anúncio' : 'Criar Anúncio',
       subtitle: _isEdit
           ? 'Atualize suas informações de contato'
@@ -155,26 +225,44 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
               'Informações de contato',
               style: _labelStyle,
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 16),
 
-            // TELEFONE
-            CustomInput(
-              label: 'Telefone com WhatsApp',
-              hint: '(DDD) 99999-9999',
+            // TELEFONE (rosinha)
+            const Text(
+              'Telefone com WhatsApp',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 16,
+                color: Color(0xFFDC004E),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 6),
+            TextField(
               controller: telefoneController,
               keyboardType: TextInputType.phone,
               maxLines: 1,
+              decoration: _decoracaoAdopet('(DDD) 99999-9999'),
             ),
 
-            const SizedBox(height: 15),
+            const SizedBox(height: 18),
 
-            // EMAIL
-            CustomInput(
-              label: 'E-mail (opcional)',
-              hint: 'exemplo@email.com',
+            // EMAIL (rosinha)
+            const Text(
+              'E-mail (opcional)',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 16,
+                color: Color(0xFFDC004E),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 6),
+            TextField(
               controller: emailController,
               keyboardType: TextInputType.emailAddress,
               maxLines: 1,
+              decoration: _decoracaoAdopet('exemplo@email.com'),
             ),
 
             const SizedBox(height: 25),
@@ -193,10 +281,10 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Color(0xFFFFE6EC),
+                color: const Color(0xFFFFE6EC),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Color(0xFFDC004E).withOpacity(0.4),
+                  color: const Color(0xFFDC004E).withOpacity(0.4),
                   width: 1.5,
                 ),
               ),
@@ -209,7 +297,6 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
                     onChanged: (v) =>
                         setState(() => _declaracaoAceita = v ?? false),
                   ),
-
                   const Expanded(
                     child: Text(
                       'Declaração de Veracidade\n'
@@ -242,4 +329,24 @@ class _DivulgarPet03State extends State<DivulgarPet03> {
     fontWeight: FontWeight.w600,
     color: Color(0xFFDC004E),
   );
+
+  static InputDecoration _decoracaoAdopet(String hint) {
+    return InputDecoration(
+      filled: true,
+      fillColor: const Color(0xFFFFE6EC),
+      hintText: hint,
+      hintStyle: const TextStyle(
+        color: Colors.black38,
+        fontFamily: 'Poppins',
+      ),
+      border: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(15)),
+        borderSide: BorderSide.none,
+      ),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 14,
+      ),
+    );
+  }
 }

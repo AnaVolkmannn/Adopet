@@ -1,9 +1,6 @@
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 class EditarContaScreen extends StatefulWidget {
   const EditarContaScreen({super.key});
@@ -17,29 +14,24 @@ class _EditarContaScreenState extends State<EditarContaScreen> {
 
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _telefoneController = TextEditingController();
-  final TextEditingController _cidadeController = TextEditingController();
-  final TextEditingController _estadoController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
 
-  bool _isLoading = true;
+  bool _isLoading = false;
   bool _isSaving = false;
 
-  String? _email;
-  String? _fotoPerfilUrl;
-
-  File? _novaFotoFile;
-
-  final ImagePicker _picker = ImagePicker();
-
-  
-  
+  @override
+  void initState() {
+    super.initState();
+    _carregarDados();
+    _telefoneController.addListener(_formatarTelefone);
+  }
 
   @override
   void dispose() {
     _nomeController.dispose();
     _telefoneController.removeListener(_formatarTelefone);
     _telefoneController.dispose();
-    _cidadeController.dispose();
-    _estadoController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -65,8 +57,7 @@ class _EditarContaScreenState extends State<EditarContaScreen> {
       formatted = '(${text.substring(0, text.length)}';
     } else if (text.length <= 7) {
       // (99) 99999
-      formatted =
-          '(${text.substring(0, 2)}) ${text.substring(2, text.length)}';
+      formatted = '(${text.substring(0, 2)}) ${text.substring(2, text.length)}';
     } else {
       // (99) 99999-9999
       formatted =
@@ -98,18 +89,7 @@ class _EditarContaScreenState extends State<EditarContaScreen> {
         return;
       }
 
-      _email = user.email;
-      _fotoPerfilUrl = user.photoURL;
-
-      // Nome base: displayName ou email ou uid
-      String nomeBase = '';
-      if (user.displayName != null && user.displayName!.trim().isNotEmpty) {
-        nomeBase = user.displayName!;
-      } else if (user.email != null) {
-        nomeBase = user.email!.split('@').first;
-      } else {
-        nomeBase = user.uid.substring(0, 6);
-      }
+      final nomeBase = user.displayName ?? 'Usuário';
 
       // Tenta buscar dados extras no Firestore
       final docUser = await FirebaseFirestore.instance
@@ -119,38 +99,26 @@ class _EditarContaScreenState extends State<EditarContaScreen> {
 
       String? nomeDb;
       String? telefoneDb;
-      String? cidadeDb;
-      String? estadoDb;
-      String? fotoDb;
+      String? emailDb;
 
       if (docUser.exists) {
         final data = docUser.data() as Map<String, dynamic>;
         nomeDb = data['name']?.toString();
         telefoneDb = data['phone']?.toString();
-        cidadeDb = (data['city'] ?? data['cidade'])?.toString();
-        estadoDb = (data['state'] ?? data['estado'])?.toString();
-        fotoDb = data['photoUrl']?.toString();
+        emailDb = data['email']?.toString();
       }
 
-      // Preenche controllers
-      _nomeController.text = (nomeDb != null && nomeDb.trim().isNotEmpty)
-          ? nomeDb
-          : nomeBase;
+      _nomeController.text =
+          (nomeDb != null && nomeDb.trim().isNotEmpty) ? nomeDb : nomeBase;
 
       if (telefoneDb != null && telefoneDb.trim().isNotEmpty) {
         _telefoneController.text = telefoneDb;
       }
 
-      if (cidadeDb != null && cidadeDb.trim().isNotEmpty) {
-        _cidadeController.text = cidadeDb;
-      }
-
-      if (estadoDb != null && estadoDb.trim().isNotEmpty) {
-        _estadoController.text = estadoDb;
-      }
-
-      if (fotoDb != null && fotoDb.trim().isNotEmpty) {
-        _fotoPerfilUrl = fotoDb;
+      if (emailDb != null && emailDb.trim().isNotEmpty) {
+        _emailController.text = emailDb;
+      } else if (user.email != null) {
+        _emailController.text = user.email!;
       }
 
       if (mounted) {
@@ -168,26 +136,6 @@ class _EditarContaScreenState extends State<EditarContaScreen> {
         ),
       );
     }
-  }
-
-  Future<void> _selecionarFotoPerfil() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
-
-    setState(() {
-      _novaFotoFile = File(picked.path);
-    });
-  }
-
-  Future<String?> _uploadFotoPerfil(String uid) async {
-    if (_novaFotoFile == null) return _fotoPerfilUrl;
-
-    final fileName = 'users_profile_photos/$uid.jpg';
-    final ref = FirebaseStorage.instance.ref().child(fileName);
-
-    await ref.putFile(_novaFotoFile!);
-    final url = await ref.getDownloadURL();
-    return url;
   }
 
   Future<void> _salvarAlteracoes() async {
@@ -210,30 +158,15 @@ class _EditarContaScreenState extends State<EditarContaScreen> {
 
       final nome = _nomeController.text.trim();
       final telefone = _telefoneController.text.trim();
-      final cidade = _cidadeController.text.trim();
-      final estado = _estadoController.text.trim();
+      final email = _emailController.text.trim();
 
-      // Upload da foto se tiver uma nova
-      final novaFotoUrl = await _uploadFotoPerfil(user.uid);
-      _fotoPerfilUrl = novaFotoUrl;
-
-      // Atualiza FirebaseAuth (nome + foto)
       await user.updateDisplayName(nome);
-      if (novaFotoUrl != null) {
-        await user.updatePhotoURL(novaFotoUrl);
-      }
 
-      // Atualiza Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .set(
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
         {
           'name': nome,
           'phone': telefone.isEmpty ? null : telefone,
-          'city': cidade.isEmpty ? null : cidade,
-          'state': estado.isEmpty ? null : estado,
-          'photoUrl': novaFotoUrl,
+          'email': email.isEmpty ? null : email,
           'updatedAt': FieldValue.serverTimestamp(),
         },
         SetOptions(merge: true),
@@ -256,6 +189,53 @@ class _EditarContaScreenState extends State<EditarContaScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erro ao salvar dados: $e'),
+          backgroundColor: const Color(0xFFDC004E),
+        ),
+      );
+    }
+  }
+
+  // 🔐 REDEFINIR SENHA
+  Future<void> _redefinirSenha() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Usuário não autenticado.'),
+            backgroundColor: Color(0xFFDC004E),
+          ),
+        );
+        return;
+      }
+
+      // usa o email do campo, se tiver, senão pega do Auth
+      final email = _emailController.text.trim().isNotEmpty
+          ? _emailController.text.trim()
+          : (user.email ?? '');
+
+      if (email.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível identificar um e-mail para redefinir a senha.'),
+            backgroundColor: Color(0xFFDC004E),
+          ),
+        );
+        return;
+      }
+
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Enviamos um e-mail para $email com o link de redefinição de senha.'),
+          backgroundColor: const Color(0xFF4CAF50),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao enviar e-mail de redefinição: $e'),
           backgroundColor: const Color(0xFFDC004E),
         ),
       );
@@ -333,15 +313,10 @@ class _EditarContaScreenState extends State<EditarContaScreen> {
 
       final uid = user.uid;
 
-      // Apaga documento do usuário no Firestore
       await FirebaseFirestore.instance.collection('users').doc(uid).delete();
 
-      // (Opcional): apagar anúncios do usuário
-
-      // Exclui o usuário do Auth
       await user.delete();
 
-      // Faz logout
       await FirebaseAuth.instance.signOut();
 
       if (!mounted) return;
@@ -396,46 +371,8 @@ class _EditarContaScreenState extends State<EditarContaScreen> {
                     key: _formKey,
                     child: Column(
                       children: [
-                        // FOTO DE PERFIL
-                        GestureDetector(
-                          onTap: _selecionarFotoPerfil,
-                          child: Column(
-                            children: [
-                              CircleAvatar(
-                                radius: 45,
-                                backgroundColor: const Color(0xFFFFE6EC),
-                                backgroundImage: _novaFotoFile != null
-                                    ? FileImage(_novaFotoFile!)
-                                        as ImageProvider
-                                    : (_fotoPerfilUrl != null
-                                        ? NetworkImage(_fotoPerfilUrl!)
-                                        : null),
-                                child: (_novaFotoFile == null &&
-                                        (_fotoPerfilUrl == null ||
-                                            _fotoPerfilUrl!.isEmpty))
-                                    ? const Icon(
-                                        Icons.person,
-                                        color: Color(0xFFDC004E),
-                                        size: 40,
-                                      )
-                                    : null,
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Toque para alterar a foto',
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 13,
-                                  color: Color(0xFFDC004E),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
                         const SizedBox(height: 24),
 
-                        // FORM CAMPOS
                         _buildTextField(
                           label: 'Nome',
                           controller: _nomeController,
@@ -458,17 +395,9 @@ class _EditarContaScreenState extends State<EditarContaScreen> {
                         const SizedBox(height: 12),
 
                         _buildTextField(
-                          label: 'Cidade',
-                          controller: _cidadeController,
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        _buildTextField(
-                          label: 'Estado (UF)',
-                          controller: _estadoController,
-                          maxLength: 2,
-                          textCapitalization: TextCapitalization.characters,
+                          label: 'Email',
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
                         ),
 
                         const SizedBox(height: 24),
@@ -499,12 +428,33 @@ class _EditarContaScreenState extends State<EditarContaScreen> {
                           ),
                         ),
 
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
+
+                        // BOTÃO REDEFINIR SENHA
+                        Align(
+                          alignment: Alignment.center,
+                          child: TextButton(
+                            onPressed: _isSaving ? null : _redefinirSenha,
+                            child: const Text(
+                              'Redefinir senha',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFFFF5C00),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
 
                         TextButton.icon(
                           onPressed: _isSaving ? null : _confirmarExcluirConta,
-                          icon: const Icon(Icons.delete_outline,
-                              color: Color(0xFFDC004E)),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Color(0xFFDC004E),
+                          ),
                           label: const Text(
                             'Excluir minha conta',
                             style: TextStyle(

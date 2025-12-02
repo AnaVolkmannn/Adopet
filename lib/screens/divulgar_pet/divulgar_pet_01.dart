@@ -26,7 +26,7 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
   final TextEditingController idadeMesesController = TextEditingController();
   bool petSemNome = false;
 
-  // 🔥 NOVO — Duas listas separadas:
+  // Duas listas separadas:
   List<String> fotosExistentes = []; // URLs já no Firebase
   List<File> fotosNovas = [];        // Arquivos escolhidos agora
 
@@ -38,6 +38,25 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
   bool _isEdit = false;
   Map<String, dynamic>? _originalData;
   bool _initialized = false;
+
+  int get _totalFotos => fotosExistentes.length + fotosNovas.length;
+
+  bool get _podeAvancar {
+    final hasNameOrNoName = petSemNome || nomeController.text.trim().isNotEmpty;
+    final hasBasicFields =
+        hasNameOrNoName &&
+        especieSelecionada != null &&
+        generoSelecionado != null &&
+        porteSelecionado != null;
+
+    final anosText = idadeAnosController.text.trim();
+    final mesesText = idadeMesesController.text.trim();
+    final idadePreenchida = anosText.isNotEmpty || mesesText.isNotEmpty;
+
+    final hasFoto = _totalFotos > 0;
+
+    return hasBasicFields && idadePreenchida && hasFoto;
+  }
 
   @override
   void didChangeDependencies() {
@@ -64,7 +83,7 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
         if (ageYears != null) idadeAnosController.text = ageYears.toString();
         if (ageMonths != null) idadeMesesController.text = ageMonths.toString();
 
-        // 🔥 CARREGAR FOTOS EXISTENTES
+        // Carregar fotos existentes
         final raw = _originalData?['photoUrls'];
         if (raw is List) {
           fotosExistentes = raw.whereType<String>().toList();
@@ -85,7 +104,7 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
 
   // Selecionar imagem
   Future<void> _selecionarImagemUnica() async {
-    final total = fotosExistentes.length + fotosNovas.length;
+    final total = _totalFotos;
 
     if (total >= 3) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -105,6 +124,7 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
 
   // Prosseguir
   void _prosseguir() {
+    // Campos obrigatórios básicos
     if ((!petSemNome && nomeController.text.isEmpty) ||
         especieSelecionada == null ||
         generoSelecionado == null ||
@@ -119,6 +139,7 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
       return;
     }
 
+    // Idade obrigatória
     final anosText = idadeAnosController.text.trim();
     final mesesText = idadeMesesController.text.trim();
 
@@ -161,7 +182,18 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
       }
     }
 
-    // 🔥 ENVIAR PARA A PRÓXIMA TELA
+    // Pelo menos 1 foto obrigatória
+    if (_totalFotos == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Adicione pelo menos 1 foto do pet para continuar.'),
+          backgroundColor: Color(0xFFDC004E),
+        ),
+      );
+      return;
+    }
+
+    // Enviar para a próxima tela
     final Map<String, dynamic> petData = {
       ...?_originalData,
       'mode': _isEdit ? 'edit' : 'create',
@@ -173,7 +205,6 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
       'ageYears': ageYears,
       'ageMonths': ageMonths,
 
-      // 🔥 IMPORTANTE
       'existingPhotos': fotosExistentes,
       'newPhotos': fotosNovas,
     };
@@ -190,6 +221,8 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
           : 'Divulgue um pet seu ou um pet perdido para adoção responsável',
       onBack: () => Navigator.pop(context),
       onNext: _prosseguir,
+      // 🔥 novo: controla visualmente o botão "Próximo"
+      nextEnabled: _podeAvancar,
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,13 +239,28 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!petSemNome)
-          CustomInput(
-            label: 'Nome do pet',
-            hint: 'Digite o nome do pet (se houver)',
-            controller: nomeController,
-            maxLines: 1,
-          ),
+        // Nome do pet
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Nome do pet',
+              style: _labelStyle,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: nomeController,
+              maxLines: 1,
+              enabled: !petSemNome,
+              onChanged: (_) => setState(() {}), // atualiza _podeAvancar
+              decoration: _decoracaoCampoAdopet(
+                petSemNome
+                    ? 'Pet sem nome'
+                    : 'Digite o nome do pet (se houver)',
+              ),
+            ),
+          ],
+        ),
 
         Row(
           children: [
@@ -242,14 +290,14 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
         // ----------------------------
         // FOTOS
         // ----------------------------
-        const Text('Adicione até 3 fotos', style: _labelStyle),
+        const Text('Adicione pelo menos 1 foto', style: _labelStyle),
         const SizedBox(height: 10),
 
         Wrap(
           spacing: 10,
           runSpacing: 10,
           children: [
-            // 🔥 Fotos existentes
+            // Fotos existentes
             for (int i = 0; i < fotosExistentes.length; i++)
               Stack(
                 children: [
@@ -275,15 +323,18 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
                           color: Colors.black54,
                           shape: BoxShape.circle,
                         ),
-                        child:
-                            const Icon(Icons.close, color: Colors.white, size: 18),
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
 
-            // 🔥 Fotos novas
+            // Fotos novas
             for (int i = 0; i < fotosNovas.length; i++)
               Stack(
                 children: [
@@ -309,18 +360,24 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
                           color: Colors.black54,
                           shape: BoxShape.circle,
                         ),
-                        child:
-                            const Icon(Icons.close, color: Colors.white, size: 18),
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
 
-            // 🔥 Botão de adicionar foto
-            if (fotosExistentes.length + fotosNovas.length < 3)
+            // Botão de adicionar foto
+            if (_totalFotos < 3)
               GestureDetector(
-                onTap: _selecionarImagemUnica,
+                onTap: () async {
+                  await _selecionarImagemUnica();
+                  setState(() {}); // atualiza contador e _podeAvancar
+                },
                 child: Container(
                   width: 100,
                   height: 100,
@@ -331,11 +388,29 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
                     ),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child:
-                      const Icon(Icons.add_a_photo, color: Color(0xFFDC004E)),
+                  child: const Icon(
+                    Icons.add_a_photo,
+                    color: Color(0xFFDC004E),
+                  ),
                 ),
               ),
           ],
+        ),
+
+        const SizedBox(height: 8),
+
+        // 🔥 Badge de quantidade de fotos
+        Text(
+          '$_totalFotos/3 fotos adicionadas',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 13,
+            color: _totalFotos == 0
+                ? const Color(0xFFDC004E)
+                : Colors.black54,
+            fontWeight:
+                _totalFotos == 0 ? FontWeight.w600 : FontWeight.w400,
+          ),
         ),
 
         const SizedBox(height: 25),
@@ -414,6 +489,7 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
                   TextField(
                     controller: idadeAnosController,
                     keyboardType: TextInputType.number,
+                    onChanged: (_) => setState(() {}),
                     decoration: _decoracaoCampoAdopet('Ex: 2'),
                   ),
                 ],
@@ -429,6 +505,7 @@ class _DivulgarPet01State extends State<DivulgarPet01> {
                   TextField(
                     controller: idadeMesesController,
                     keyboardType: TextInputType.number,
+                    onChanged: (_) => setState(() {}),
                     decoration: _decoracaoCampoAdopet('Ex: 6'),
                   ),
                 ],

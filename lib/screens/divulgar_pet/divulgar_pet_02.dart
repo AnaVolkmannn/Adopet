@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../widgets/anuncio_base_screen.dart';
-import '../../widgets/custom_input.dart';
 
 class DivulgarPet02 extends StatefulWidget {
   const DivulgarPet02({super.key});
@@ -37,7 +36,7 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
     super.initState();
     _carregarEstados();
 
-    // Mascara de data
+    // Máscara de data
     dataController.addListener(_formatarData);
   }
 
@@ -95,13 +94,19 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
 
     if (text.length >= 2) {
       formatted = text.substring(0, 2) + "/";
-    } else if (text.length >= 1) formatted = text;
+    } else if (text.length >= 1) {
+      formatted = text;
+    }
 
     if (text.length >= 4) {
       formatted += text.substring(2, 4) + "/";
-    } else if (text.length > 2) formatted += text.substring(2);
+    } else if (text.length > 2) {
+      formatted += text.substring(2);
+    }
 
-    if (text.length > 4) formatted += text.substring(4);
+    if (text.length > 4) {
+      formatted += text.substring(4);
+    }
 
     if (formatted != dataController.text) {
       dataController.value = TextEditingValue(
@@ -135,7 +140,9 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
 
         _aplicarEstadoCidadeSePossivel();
       }
-    } catch (_) {} finally {
+    } catch (_) {
+      // você pode logar o erro aqui se quiser
+    } finally {
       if (mounted) setState(() => _loadingEstados = false);
     }
   }
@@ -166,7 +173,9 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
           _cidadeSelecionada = cidadeInicial;
         }
       }
-    } catch (_) {} finally {
+    } catch (_) {
+      // idem
+    } finally {
       if (mounted) setState(() => _loadingCidades = false);
     }
   }
@@ -205,6 +214,18 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
     } catch (_) {
       return false;
     }
+  }
+
+  // ---------------------------------------------------------------------
+  // REGRAS PARA HABILITAR BOTÃO "PROSSEGUIR"
+  // ---------------------------------------------------------------------
+  bool get _podeAvancar {
+    if (_tipoSituacao == null ||
+        _estadoSelecionado == null ||
+        _cidadeSelecionada == null) {
+      return false;
+    }
+    return true;
   }
 
   // ---------------------------------------------------------------------
@@ -261,6 +282,7 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
     return AnuncioBaseScreen(
       onBack: () => Navigator.pop(context),
       onNext: _proximoPasso,
+      nextEnabled: _podeAvancar,
       title: _isEdit ? 'Editar Anúncio' : 'Criar Anúncio',
       subtitle: _isEdit
           ? 'Atualize os detalhes do anúncio do seu pet'
@@ -279,9 +301,13 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
               dropdownColor: const Color(0xFFFFE6EC),
               items: const [
                 DropdownMenuItem(
-                    value: 'Doacao', child: Text('Quero doar um pet meu')),
+                  value: 'Para doar',
+                  child: Text('Quero doar um pet meu'),
+                ),
                 DropdownMenuItem(
-                    value: 'Achado', child: Text('Encontrei um pet perdido')),
+                  value: 'Encontrei perdido',
+                  child: Text('Encontrei um pet perdido'),
+                ),
               ],
               onChanged: (v) => setState(() => _tipoSituacao = v),
             ),
@@ -342,25 +368,32 @@ class _DivulgarPet02State extends State<DivulgarPet02> {
 
             const SizedBox(height: 20),
 
-            CustomInput(
-              label: "Descrição do pet e da situação",
-              hint:
-                  "Conte mais detalhes sobre o pet e o motivo do anúncio...",
+            const Text('Descrição do pet e da situação', style: _labelStyle),
+            const SizedBox(height: 8),
+            TextField(
               controller: descricaoController,
               maxLines: 3,
+              decoration: _decoracaoAdopet(
+                "Conte mais detalhes sobre o pet e o motivo do anúncio...",
+              ),
             ),
 
             const SizedBox(height: 20),
 
-            if (_tipoSituacao == 'Achado')
-              CustomInput(
-                label: "Data em que encontrou o pet",
-                hint: "dd/mm/aaaa",
+            if (_tipoSituacao == 'Encontrei perdido') ...[
+              const Text(
+                "Data em que encontrou o pet",
+                style: _labelStyle,
+              ),
+              const SizedBox(height: 8),
+              TextField(
                 controller: dataController,
                 keyboardType: TextInputType.number,
+                maxLines: 1,
+                decoration: _decoracaoAdopet("dd/mm/aaaa"),
               ),
-
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
+            ],
           ],
         ),
       ),

@@ -1,9 +1,15 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// ignore_for_file: unused_element_parameter, duplicate_ignore
+
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../core/theme.dart';
-import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:http/http.dart' as http;
+
+import '../../../core/theme.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -14,18 +20,19 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _surnameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _telefoneController = TextEditingController();  // Adicionado o controlador de telefone
+  final TextEditingController _telefoneController = TextEditingController();
 
   final TextEditingController _cepController = TextEditingController();
   final TextEditingController _stateController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _bairroController = TextEditingController();
   final TextEditingController _streetController = TextEditingController();
   final TextEditingController _numberController = TextEditingController();
 
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -33,11 +40,22 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
-  // Adicionando máscara para o telefone
-  final telefoneMask = MaskTextInputFormatter(mask: "(##) #####-####", filter: {"#": RegExp(r'[0-9]')});
+  // Máscaras
+  final telefoneMask = MaskTextInputFormatter(
+    mask: "(##) #####-####",
+    filter: {"#": RegExp(r'[0-9]')},
+  );
 
-  // 🔹 NOVO — checkbox para consentimento
+  final cepMask = MaskTextInputFormatter(
+    mask: "#####-###",
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+
+  // Checkbox para consentimento
   bool _privacyAccepted = false;
+
+  // Controle de busca de CEP pra evitar múltiplas chamadas
+  bool _isFetchingCep = false;
 
   @override
   void initState() {
@@ -62,7 +80,7 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
-    // ⚠️ NOVO — Validação do checkbox
+    // Validação do checkbox
     if (!_privacyAccepted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -90,16 +108,16 @@ class _SignupScreenState extends State<SignupScreen> {
       await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
         'uid': user.uid,
         'name': _nameController.text.trim(),
-        'surname': _surnameController.text.trim(),
         'email': user.email,
-        'phone': _telefoneController.text.trim(),  // Salvando telefone no Firestore
+        'phone': _telefoneController.text.trim(),
         'cep': _cepController.text.trim(),
         'state': _stateController.text.trim(),
         'city': _cityController.text.trim(),
+        'bairro': _bairroController.text.trim(),
         'street': _streetController.text.trim(),
         'number': _numberController.text.trim(),
 
-        // 🔥 NOVO — salva o consentimento
+        // Consentimento
         'privacyConsent': true,
 
         'favorites': <String>[],
@@ -125,6 +143,73 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   // ============================================================== 
+  // ==================== 🔍 CEP -> VIACEP ========================
+  // ==============================================================
+
+  Future<void> _buscarEnderecoPorCep(String cepDigitado) async {
+    final cep = cepDigitado.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (cep.length != 8) return; // só busca CEP completo
+
+    setState(() {
+      _isFetchingCep = true;
+    });
+
+    try {
+      final response =
+          await http.get(Uri.parse('https://viacep.com.br/ws/$cep/json/'));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data['erro'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('CEP não encontrado. Verifique e tente novamente.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+
+        setState(() {
+          _stateController.text = (data['uf'] ?? '').toString();
+          _cityController.text = (data['localidade'] ?? '').toString();
+          _bairroController.text = (data['bairro'] ?? '').toString();
+          _streetController.text = (data['logradouro'] ?? '').toString();
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erro ao buscar o endereço. Tente novamente.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao buscar CEP: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isFetchingCep = false;
+        });
+      }
+    }
+  }
+
+  void _onCepChanged(String value) {
+    final cep = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cep.length == 8 && !_isFetchingCep) {
+      _buscarEnderecoPorCep(value);
+    }
+  }
+
+  // ============================================================== 
   // ========================== WIDGET =============================
   // ==============================================================
 
@@ -142,7 +227,6 @@ class _SignupScreenState extends State<SignupScreen> {
                 Center(
                   child: Column(
                     children: [
-                      // 🐾 Logo 2
                       Padding(
                         padding: const EdgeInsets.only(top: 50),
                         child: Image.asset(
@@ -167,72 +251,85 @@ class _SignupScreenState extends State<SignupScreen> {
                 const SizedBox(height: 35),
                 _sectionTitle("Dados pessoais"),
 
-                _StyledInput(
-                  label: 'Nome',
-                  hint: 'Digite o seu primeiro nome',
+                _buildTextField(
+                  label: 'Nome Completo',
+                  hintText: 'Digite o seu nome completo',
                   controller: _nameController,
                 ),
                 const SizedBox(height: 18),
 
-                _StyledInput(
-                  label: 'Sobrenome',
-                  hint: 'Digite seu sobrenome',
-                  controller: _surnameController,
-                ),
-                const SizedBox(height: 18),
-
-                _StyledInput(
+                _buildTextField(
                   label: 'E-mail',
-                  hint: 'Digite seu e-mail',
+                  hintText: 'Digite seu e-mail',
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 18),
 
-                _StyledInput(
+                _buildTextField(
                   label: 'Telefone',
-                  hint: '(xx) xxxxx-xxxx',
+                  hintText: '(xx) xxxxx-xxxx',
                   controller: _telefoneController,
                   keyboardType: TextInputType.phone,
-                  inputFormatter: telefoneMask,  // Aplicando a máscara de telefone
+                  inputFormatter: telefoneMask,
                 ),
                 const SizedBox(height: 18),
 
                 const SizedBox(height: 35),
                 _sectionTitle("Endereço"),
+                const Text(
+                      '(preenchimento automático)',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 16,
+                          fontWeight: FontWeight.normal,
+                          color: Color(0xFFDC004E),
+                        ),
+                      ),
 
-                _StyledInput(
+                const SizedBox(height: 18),
+
+                _buildTextField(
                   label: 'CEP',
-                  hint: '00000-000',
+                  hintText: '00000-000',
                   controller: _cepController,
                   keyboardType: TextInputType.number,
+                  inputFormatter: cepMask,
+                  onChanged: _onCepChanged,
                 ),
                 const SizedBox(height: 18),
 
-                _StyledInput(
+                _buildTextField(
                   label: 'Estado',
-                  hint: 'UF',
+                  hintText: 'UF',
                   controller: _stateController,
                 ),
                 const SizedBox(height: 18),
 
-                _StyledInput(
+                _buildTextField(
                   label: 'Cidade',
-                  hint: 'Cidade',
+                  hintText: 'Cidade',
                   controller: _cityController,
                 ),
                 const SizedBox(height: 18),
 
-                _StyledInput(
+                _buildTextField(
+                  label: 'Bairro',
+                  hintText: 'Bairro',
+                  controller: _bairroController,
+                ),
+                const SizedBox(height: 18),
+
+                _buildTextField(
                   label: 'Rua',
-                  hint: 'Rua',
+                  hintText: 'Rua',
                   controller: _streetController,
                 ),
                 const SizedBox(height: 18),
 
-                _StyledInput(
+                _buildTextField(
                   label: 'Número',
-                  hint: 'Número',
+                  hintText: 'Número',
                   controller: _numberController,
                   keyboardType: TextInputType.number,
                 ),
@@ -240,9 +337,9 @@ class _SignupScreenState extends State<SignupScreen> {
                 const SizedBox(height: 35),
                 _sectionTitle("Segurança"),
 
-                _StyledInput(
+                _buildTextField(
                   label: 'Senha',
-                  hint: 'Digite sua senha',
+                  hintText: 'Crie sua senha',
                   controller: _passwordController,
                   obscure: _obscurePassword,
                   isPassword: true,
@@ -252,19 +349,20 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 const SizedBox(height: 18),
 
-                _StyledInput(
+                _buildTextField(
                   label: 'Confirmar senha',
-                  hint: 'Repita sua senha',
+                  hintText: 'Repita sua senha',
                   controller: _confirmPasswordController,
                   obscure: _obscureConfirmPassword,
                   isPassword: true,
                   onToggleVisibility: () {
                     setState(
-                        () => _obscureConfirmPassword = !_obscureConfirmPassword);
+                      () =>
+                          _obscureConfirmPassword = !_obscureConfirmPassword,
+                    );
                   },
                 ),
 
-                // 🔥 NOVO — Checkbox
                 const SizedBox(height: 25),
                 Row(
                   children: [
@@ -347,8 +445,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () =>
-                            Navigator.pushNamed(context, '/login'),
+                        onTap: () => Navigator.pushNamed(context, '/login'),
                         child: const Text(
                           'Logar',
                           style: TextStyle(
@@ -385,90 +482,66 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
     );
   }
-}
 
-// ─────────────────────────────
-// 🔹 Input reutilizável
-// ─────────────────────────────
-
-class _StyledInput extends StatelessWidget {
-  final String label;
-  final String hint;
-  final bool obscure;
-  final bool isPassword;
-  final TextEditingController? controller;
-  final TextInputType keyboardType;
-  final TextInputAction textInputAction;
-  final VoidCallback? onToggleVisibility;
-  final TextInputFormatter? inputFormatter;
-
-  const _StyledInput({
-    required this.label,
-    required this.hint,
-    this.obscure = false,
-    this.isPassword = false,
-    this.controller,
-    this.keyboardType = TextInputType.text,
-    this.textInputAction = TextInputAction.next,
-    this.onToggleVisibility,
-    this.inputFormatter,
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style:
-              const TextStyle(fontFamily: 'Poppins', color: Colors.black54),
+  // ─────────────────────────────
+  // 🔹 Campo reutilizável no estilo EditarConta
+  // ─────────────────────────────
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    String? hintText,
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
+    int? maxLength,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+    bool obscure = false,
+    bool isPassword = false,
+    VoidCallback? onToggleVisibility,
+    TextInputFormatter? inputFormatter,
+    ValueChanged<String>? onChanged,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      validator: validator,
+      maxLength: maxLength,
+      obscureText: obscure,
+      textCapitalization: textCapitalization,
+      onChanged: onChanged,
+      inputFormatters: inputFormatter != null ? [inputFormatter] : null,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hintText,
+        counterText: maxLength != null ? '' : null,
+        labelStyle: const TextStyle(
+          fontFamily: 'Poppins',
+          color: Color(0xFFDC004E),
         ),
-        const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFDC004E).withOpacity(0.2),
-                offset: const Offset(0, 6),
-                blurRadius: 12,
-              ),
-            ],
-          ),
-          child: TextField(
-            controller: controller,
-            obscureText: obscure,
-            keyboardType: keyboardType,
-            textInputAction: textInputAction,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: const Color(0xFFFFE6EC),
-              hintText: hint,
-              hintStyle: const TextStyle(
-                color: Colors.black38,
-                fontFamily: 'Poppins',
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 14),
-              suffixIcon: isPassword
-                  ? IconButton(
-                      icon: Icon(
-                        obscure ? Icons.visibility_off : Icons.visibility,
-                        color: const Color(0xFFFF5C00),
-                      ),
-                      onPressed: onToggleVisibility,
-                    )
-                  : null,
-            ),
-            inputFormatters: inputFormatter != null ? [inputFormatter!] : [],
-          ),
+        hintStyle: const TextStyle(
+          fontFamily: 'Poppins',
+          color: Colors.black38,
         ),
-      ],
+        filled: true,
+        fillColor: const Color(0xFFFFE6EC),
+        border: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(15)),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  obscure ? Icons.visibility_off : Icons.visibility,
+                  color: const Color(0xFFFF5C00),
+                ),
+                onPressed: onToggleVisibility,
+              )
+            : null,
+      ),
+      style: const TextStyle(fontFamily: 'Poppins'),
     );
   }
 }

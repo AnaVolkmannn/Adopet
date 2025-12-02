@@ -9,6 +9,9 @@ class AnuncioBaseScreen extends StatelessWidget {
   final String title;
   final String subtitle;
 
+  /// 🔥 NOVO: controla se o botão "Prosseguir" está habilitado
+  final bool nextEnabled;
+
   const AnuncioBaseScreen({
     super.key,
     required this.child,
@@ -16,6 +19,7 @@ class AnuncioBaseScreen extends StatelessWidget {
     required this.onNext,
     this.title = 'Criar Anúncio',
     this.subtitle = 'Divulgar um pet para adoção responsável',
+    this.nextEnabled = true, // 👈 padrão: habilitado
   });
 
   @override
@@ -97,10 +101,8 @@ class AnuncioBaseScreen extends StatelessWidget {
       // 🩶 Rodapé fixo com botões padrão
       bottomSheet: Container(
         color: const Color(0xFFFFF7E6),
-
-        // 👉 Só margem inferior agora
-        padding: const EdgeInsets.only(bottom: 60, left: 24, right: 24, top: 10),
-
+        padding:
+            const EdgeInsets.only(bottom: 60, left: 24, right: 24, top: 10),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -109,10 +111,18 @@ class AnuncioBaseScreen extends StatelessWidget {
               small: true,
               onPressed: onBack,
             ),
-            CustomButton(
-              text: 'Prosseguir',
-              small: true,
-              onPressed: onNext,
+
+            // 🔥 Botão "Prosseguir" desabilitável
+            IgnorePointer(
+              ignoring: !nextEnabled,
+              child: Opacity(
+                opacity: nextEnabled ? 1.0 : 0.4,
+                child: CustomButton(
+                  text: 'Prosseguir',
+                  small: true,
+                  onPressed: onNext,
+                ),
+              ),
             ),
           ],
         ),
