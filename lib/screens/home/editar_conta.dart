@@ -392,14 +392,6 @@ class _EditarContaScreenState extends State<EditarContaScreen> {
                           keyboardType: TextInputType.phone,
                         ),
 
-                        const SizedBox(height: 12),
-
-                        _buildTextField(
-                          label: 'Email',
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                        ),
-
                         const SizedBox(height: 24),
 
                         SizedBox(
